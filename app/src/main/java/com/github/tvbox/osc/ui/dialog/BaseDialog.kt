@@ -88,13 +88,27 @@ open class BaseDialog : Dialog {
         }
         val metrics = context.resources.displayMetrics
         val portrait = metrics.heightPixels > metrics.widthPixels
-        window?.setGravity(if (portrait) Gravity.BOTTOM else Gravity.END or Gravity.CENTER_VERTICAL)
-        window?.setLayout(
-            if (portrait) metrics.widthPixels else Math.min(metrics.widthPixels, MobileSheets.dp(context, 420f)),
-            WindowManager.LayoutParams.WRAP_CONTENT
-        )
-        window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        val win = window
+        if (win != null) {
+            if (portrait) {
+                win.setGravity(Gravity.BOTTOM)
+                win.setLayout(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT
+                )
+                win.setWindowAnimations(R.style.MobileSheetBottomAnimation)
+            } else {
+                win.setGravity(Gravity.END or Gravity.TOP)
+                val panelWidth = Math.min(metrics.widthPixels, MobileSheets.dp(context, 380f))
+                win.setLayout(
+                    panelWidth,
+                    WindowManager.LayoutParams.MATCH_PARENT
+                )
+                win.setWindowAnimations(R.style.MobileSheetRightAnimation)
+            }
+            win.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            win.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        }
     }
 
     private fun isContextInvalid(): Boolean {

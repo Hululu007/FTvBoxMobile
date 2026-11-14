@@ -40,6 +40,16 @@
         <item name="android:windowFullscreen">false</item>
     </style>
 
+    <style name="MobileSheetRightAnimation">
+        <item name="android:windowEnterAnimation">@anim/mobile_sheet_right_enter</item>
+        <item name="android:windowExitAnimation">@anim/mobile_sheet_right_exit</item>
+    </style>
+
+    <style name="MobileSheetBottomAnimation">
+        <item name="android:windowEnterAnimation">@anim/mobile_sheet_bottom_enter</item>
+        <item name="android:windowExitAnimation">@anim/mobile_sheet_bottom_exit</item>
+    </style>
+
     <style name="epg_window_btn">
         <item name="android:gravity">center</item>
         <item name="android:background">@drawable/item_bg_selector_right</item>

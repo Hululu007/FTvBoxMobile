@@ -875,6 +875,11 @@ class NativeBehaviorTest {
                     val decor = shown.get().window!!.decorView as ViewGroup
                     assertTrue(layout, decor.width <= activity.window.decorView.width)
                     assertContainedHorizontally(decor, layout, false)
+                    if (layout == "dialog_danmu_setting") {
+                        assertEquals("搜索在线弹幕 ›", shown.get().findViewById<TextView>(R.id.danmuSearch).text)
+                    } else if (layout == "dialog_subtitle") {
+                        assertEquals("本地字幕", shown.get().findViewById<TextView>(R.id.selectLocal).text)
+                    }
                 }
                 screenshot(layout)
                 settings.onActivity { shown.get().dismiss() }
@@ -916,16 +921,21 @@ class NativeBehaviorTest {
             }
             category.filters.add(filter)
             val changed = booleanArrayOf(false)
+            val filterDialog = AtomicReference<GridFilterDialog>()
             settings.onActivity { activity ->
                 val dialog = GridFilterDialog(activity)
                 dialog.setData(category)
                 dialog.setOnDismiss { changed[0] = true }
                 dialog.show()
+                filterDialog.set(dialog)
             }
+            SystemClock.sleep(350)
             onView(withText("2026")).inRoot(isDialog()).perform(click())
+            assertEquals("2026", category.filterSelect["year"])
             screenshot("filter-selection")
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
-            assertTrue(changed[0])
+            await(BooleanSupplier { !filterDialog.get().isShowing })
+            await(BooleanSupplier { changed[0] })
             assertEquals("2026", category.filterSelect["year"])
         }
     }
