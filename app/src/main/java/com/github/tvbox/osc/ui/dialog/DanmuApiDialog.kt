@@ -1,35 +1,36 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
-import android.view.KeyEvent
-import android.view.View
-import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.api.DanmakuApi
+import com.github.tvbox.osc.ui.compose.DanmuApiDialogContent
 import com.github.tvbox.osc.util.HawkConfig
 import com.orhanobut.hawk.Hawk
 
 class DanmuApiDialog(context: Context) : BaseDialog(context) {
-    private val input: EditText
     private var listener: OnListener? = null
 
     init {
-        setContentView(R.layout.dialog_danmu_api)
+        sheetLayoutName = "dialog_danmu_api"
         setCanceledOnTouchOutside(false)
-        input = findViewById(R.id.input)
-        input.setText(Hawk.get(HawkConfig.DANMU_API, ""))
-        input.hint = getDefaultApi()
-        findViewById<View>(R.id.inputDefault).setOnClickListener { saveDefault() }
-        findViewById<View>(R.id.inputSubmit).setOnClickListener { save(input.text.toString().trim()) }
-        input.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER)) {
-                save(input.text.toString().trim())
-                true
-            } else {
-                false
+        val initialText = Hawk.get(HawkConfig.DANMU_API, "")
+        val defaultHint = getDefaultApi()
+
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    DanmuApiDialogContent(
+                        initialValue = initialText,
+                        hintText = defaultHint,
+                        onDefaultClick = { saveDefault() },
+                        onSubmitClick = { api -> save(api) }
+                    )
+                }
             }
         }
+        setContentView(composeView)
     }
 
     private fun getDefaultApi(): String {

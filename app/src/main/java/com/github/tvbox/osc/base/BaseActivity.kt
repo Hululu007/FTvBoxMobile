@@ -72,7 +72,9 @@ abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
             th.printStackTrace()
         }
         super.onCreate(savedInstanceState)
-        setContentView(getLayoutResID())
+        val layoutId = getLayoutResID()
+        val composeLayout = com.github.tvbox.osc.ui.compose.ComposeLayouts.createActivityLayout(this, layoutId)
+        if (composeLayout != null) setContentView(composeLayout) else setContentView(layoutId)
         mContext = this
         initSystemUiListener()
         CutoutUtil.adaptCutoutAboveAndroidP(mContext, true)

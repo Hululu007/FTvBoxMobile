@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Collect & History -->
+    <item name="tvDelTip" type="id" />
+    <item name="tvDelete" type="id" />
+    <item name="tvClear" type="id" />
+    <item name="mGridView" type="id" />
+
+    <!-- Push -->
+    <item name="rootLayout" type="id" />
+    <item name="mobileLinkInput" type="id" />
+    <item name="pushLocal" type="id" />
+    <item name="mobilePlayLink" type="id" />
+    <item name="ivQRCode" type="id" />
+    <item name="tvAddress" type="id" />
+
+    <!-- Local File -->
+    <item name="tvTitle" type="id" />
+    <item name="tvPath" type="id" />
+    <item name="fileList" type="id" />
+    <item name="tvEmpty" type="id" />
+
+    <!-- Setting & Home -->
+    <item name="mViewPager" type="id" />
+    <item name="topLayout" type="id" />
+    <item name="tvName" type="id" />
+    <item name="tvDate" type="id" />
+    <item name="contentLayout" type="id" />
+    <item name="cl_root" type="id" />
+
+    <!-- Search & FastSearch -->
+    <item name="mobileSearchBack" type="id" />
+    <item name="mSearchTitle" type="id" />
+    <item name="mGridViewWordFenci" type="id" />
+    <item name="llWord" type="id" />
+    <item name="mGridViewWord" type="id" />
+    <item name="llLayout" type="id" />
+    <item name="mGridViewFilter" type="id" />
+    <item name="etSearch" type="id" />
+    <item name="tvSearch" type="id" />
+    <item name="tvSearchCheckboxBtn" type="id" />
+    <item name="mobileSearchSuggestions" type="id" />
+    <item name="llHistoryWord" type="id" />
+    <item name="tvHistoryTitle" type="id" />
+    <item name="tvHistoryClear" type="id" />
+    <item name="mobileSearchHistoryEmpty" type="id" />
+    <item name="historyWordGrid" type="id" />
+    <item name="wordSwitch" type="id" />
+    <item name="mobileSearchResults" type="id" />
+    <item name="keyBoardRoot" type="id" />
+    <item name="remoteRoot" type="id" />
+
+    <!-- Detail -->
+    <item name="thumbContainer" type="id" />
+    <item name="ivThumb" type="id" />
+    <item name="previewPlayerPlace" type="id" />
+    <item name="tvSite" type="id" />
+    <item name="tvYear" type="id" />
+    <item name="tvArea" type="id" />
+    <item name="tvLang" type="id" />
+    <item name="tvType" type="id" />
+    <item name="tvActor" type="id" />
+    <item name="tvDirector" type="id" />
+    <item name="tvPlayUrl" type="id" />
+    <item name="tvDes" type="id" />
+    <item name="tvPlay" type="id" />
+    <item name="tvQuickSearch" type="id" />
+    <item name="tvDesc" type="id" />
+    <item name="tvCollect" type="id" />
+    <item name="tvChangeSource" type="id" />
+    <item name="mEmptyPlaylist" type="id" />
+    <item name="mGridViewFlag" type="id" />
+    <item name="mSeriesGroupTv" type="id" />
+    <item name="mSeriesSortTv" type="id" />
+    <item name="mSeriesGroupView" type="id" />
+    <item name="mGridViewQuality" type="id" />
+    <item name="previewPlayer" type="id" />
+    <item name="previewPlayerBlock" type="id" />
+
+    <!-- Play -->
+    <item name="mVideoView" type="id" />
+    <item name="danmaku" type="id" />
+    <item name="play_loading" type="id" />
+    <item name="play_load_error" type="id" />
+    <item name="play_load_tip" type="id" />
+
+    <!-- User -->
+    <item name="tvUserHome" type="id" />
+    <item name="tvHistory" type="id" />
+    <item name="tvSetting" type="id" />
+    <item name="tvLive" type="id" />
+    <item name="tvPush" type="id" />
+    <item name="tvFavorite" type="id" />
+    <item name="tvHotList" type="id" />
+    <item name="mobileLocal" type="id" />
+
+    <!-- LivePlay -->
+    <item name="live_root" type="id" />
+    <item name="switchChannelSnapshotOverlay" type="id" />
+    <item name="switchChannelSnapshotImage" type="id" />
+    <item name="tv_selected_channel" type="id" />
+    <item name="tvLeftChannnelListLayout" type="id" />
+    <item name="ll_typeSelect" type="id" />
+    <item name="mGroupGridView" type="id" />
+    <item name="divLoadEpgleft" type="id" />
+    <item name="tv_arrow0" type="id" />
+    <item name="iv_arrow2" type="id" />
+    <item name="tv_arrow3" type="id" />
+    <item name="mChannelGridView" type="id" />
+    <item name="divLoadEpgDivider" type="id" />
+    <item name="divLoadEpg" type="id" />
+    <item name="tv_arrow" type="id" />
+    <item name="iv_arrow" type="id" />
+    <item name="tv_arrow2" type="id" />
+    <item name="divEPG" type="id" />
+    <item name="mEpgDateGridView" type="id" />
+    <item name="lv_epg" type="id" />
+    <item name="txtNoEpg" type="id" />
+    <item name="tvRightSettingLayout" type="id" />
+    <item name="mSettingItemView" type="id" />
+    <item name="mSettingGroupView" type="id" />
+    <item name="tvChannel" type="id" />
+    <item name="tv_top_status" type="id" />
+    <item name="tvNetSpeed" type="id" />
+    <item name="tvTime" type="id" />
+    <item name="ll_epg" type="id" />
+    <item name="view_bg" type="id" />
+    <item name="channelinfo" type="id" />
+    <item name="tv_channel_bottom_number" type="id" />
+    <item name="view_line" type="id" />
+    <item name="live_icon_null_bg" type="id" />
+    <item name="live_icon_null_text" type="id" />
+    <item name="img_live_icon" type="id" />
+    <item name="tv_channel_bar_name" type="id" />
+    <item name="tv_current_program" type="id" />
+    <item name="tv_current_program_time" type="id" />
+    <item name="tv_current_program_name" type="id" />
+    <item name="tv_next_program" type="id" />
+    <item name="tv_next_program_time" type="id" />
+    <item name="tv_next_program_name" type="id" />
+    <item name="live_status_info" type="id" />
+    <item name="tv_source" type="id" />
+    <item name="tvResolution" type="id" />
+    <item name="tv_shownum" type="id" />
+    <item name="tv_showTime" type="id" />
+    <item name="ll_loading" type="id" />
+    <item name="ll_right_top_huikan" type="id" />
+    <item name="iv_back_bg" type="id" />
+    <item name="tv_right_top_epg_name" type="id" />
+    <item name="tv_right_top_type" type="id" />
+    <item name="ll_right_top_loading" type="id" />
+    <item name="iv_circle_bg" type="id" />
+    <item name="tv_right_top_channel_name" type="id" />
+    <item name="backcontroller" type="id" />
+    <item name="ll_play" type="id" />
+    <item name="iv_play" type="id" />
+    <item name="progress_container" type="id" />
+    <item name="iv_playpause" type="id" />
+    <item name="tv_currentpos" type="id" />
+    <item name="pb_progressbar" type="id" />
+    <item name="tv_duration" type="id" />
+
+    <!-- ModelSetting -->
+    <item name="llDebug" type="id" />
+    <item name="tvDebugOpen" type="id" />
+    <item name="llApi" type="id" />
+    <item name="tvApi" type="id" />
+    <item name="llApiRightGroup" type="id" />
+    <item name="llApiHistory" type="id" />
+    <item name="tvMediaCodec1" type="id" />
+    <item name="llApiLine" type="id" />
+    <item name="tvApiLine" type="id" />
+    <item name="llHomeApi" type="id" />
+    <item name="tvHomeApi" type="id" />
+    <item name="tvHomeLive" type="id" />
+    <item name="tvHomeText" type="id" />
+    <item name="llHomeRec" type="id" />
+    <item name="tvHomeRec" type="id" />
+    <item name="llHomeRecStyle" type="id" />
+    <item name="showRecStyleText" type="id" />
+    <item name="llSearchView" type="id" />
+    <item name="tvSearchView" type="id" />
+    <item name="showFastSearch" type="id" />
+    <item name="showFastSearchText" type="id" />
+    <item name="llMediaCodec" type="id" />
+    <item name="tvMediaCodec" type="id" />
+    <item name="m3u8Ad" type="id" />
+    <item name="m3u8AdText" type="id" />
+    <item name="danmuOpen" type="id" />
+    <item name="danmuOpenText" type="id" />
+    <item name="danmuApi" type="id" />
+    <item name="danmuApiText" type="id" />
+    <item name="llRender" type="id" />
+    <item name="tvRenderType" type="id" />
+    <item name="autoSwitchLine" type="id" />
+    <item name="autoSwitchLineText" type="id" />
+    <item name="llDns" type="id" />
+    <item name="tvDns" type="id" />
+    <item name="llParseWebVew" type="id" />
+    <item name="tvParseWebView" type="id" />
+    <item name="llHistoryMerge" type="id" />
+    <item name="tvHistoryMerge" type="id" />
+    <item name="llHistoryNum" type="id" />
+    <item name="tvHistoryNum" type="id" />
+    <item name="llWp" type="id" />
+    <item name="llWpRecovery" type="id" />
+    <item name="llScale" type="id" />
+    <item name="tvScaleType" type="id" />
+    <item name="showPreview" type="id" />
+    <item name="showPreviewText" type="id" />
+    <item name="llIjkCachePlay" type="id" />
+    <item name="tvIjkCachePlay" type="id" />
+    <item name="llClearCache" type="id" />
+    <item name="llBackup" type="id" />
+    <item name="llAbout" type="id" />
+
+    <!-- Dialogs & Items used across app -->
+    <item name="input" type="id" />
+    <item name="inputSubmit" type="id" />
+    <item name="mobileApiActions" type="id" />
+    <item name="tvSeriesFlag" type="id" />
+    <item name="tvSeriesFlagSelect" type="id" />
+    <item name="list" type="id" />
+    <item name="loadingBar" type="id" />
+    <item name="selectInternal" type="id" />
+    <item name="selectLocal" type="id" />
+    <item name="selectRemote" type="id" />
+    <item name="subtitleSizeMinus" type="id" />
+    <item name="subtitleSizeText" type="id" />
+    <item name="subtitleSizePlus" type="id" />
+    <item name="subtitleTimeMinus" type="id" />
+    <item name="subtitleTimeText" type="id" />
+    <item name="subtitleTimePlus" type="id" />
+    <item name="subtitleStyleOne" type="id" />
+    <item name="subtitleStyleTwo" type="id" />
+    <item name="subtitlePositionText" type="id" />
+    <item name="subtitleTimeHint" type="id" />
+    <item name="downXWalk" type="id" />
+    <item name="downXWalkArch" type="id" />
+
+    <!-- Fake layout references so R.layout exists for code compiling -->
+    <item name="activity_collect" type="layout" />
+    <item name="activity_detail" type="layout" />
+    <item name="activity_fast_search" type="layout" />
+    <item name="activity_history" type="layout" />
+    <item name="activity_home" type="layout" />
+    <item name="activity_live_play" type="layout" />
+    <item name="activity_local_file" type="layout" />
+    <item name="activity_push" type="layout" />
+    <item name="activity_search" type="layout" />
+    <item name="activity_setting" type="layout" />
+    <item name="fragment_grid" type="layout" />
+    <item name="fragment_model" type="layout" />
+    <item name="fragment_user" type="layout" />
+    <item name="activity_play" type="layout" />
+    <item name="mobileHomeActionsClip" type="id" />
+    <item name="tvFilter" type="id" />
+    <item name="tvFilterColor" type="id" />
+    <item name="tvDel" type="id" />
+    <item name="llPlay" type="id" />
+    <item name="episode_title" type="id" />
+</resources>

@@ -16,6 +16,11 @@ import xyz.doikki.videoplayer.util.CutoutUtil
 open class BaseDialog : Dialog {
     private var phoneSheetInstalled = false
     private var sheetLayout = ""
+    var sheetLayoutName: String
+        get() = sheetLayout
+        set(value) {
+            sheetLayout = value
+        }
     @JvmField
     var sheetTitle: CharSequence? = null
 
@@ -32,11 +37,15 @@ open class BaseDialog : Dialog {
     open fun getSheetTitle(): CharSequence {
         val st = sheetTitle
         if (st != null) return st
-        for (id in intArrayOf(R.id.title, R.id.episode_title)) {
-            val label = findViewById<TextView>(id)
-            if (label != null && label.text.isNotEmpty()) {
-                label.visibility = View.GONE
-                return label.text
+        val titleId = context.resources.getIdentifier("title", "id", context.packageName)
+        val epTitleId = context.resources.getIdentifier("episode_title", "id", context.packageName)
+        for (id in intArrayOf(titleId, epTitleId)) {
+            if (id != 0) {
+                val label = findViewById<TextView>(id)
+                if (label != null && label.text.isNotEmpty()) {
+                    label.visibility = View.GONE
+                    return label.text
+                }
             }
         }
         return when (sheetLayout) {

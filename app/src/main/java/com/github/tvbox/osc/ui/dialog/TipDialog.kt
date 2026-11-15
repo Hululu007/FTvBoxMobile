@@ -1,8 +1,10 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
-import android.widget.TextView
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.platform.ComposeView
+import com.github.tvbox.osc.ui.compose.TipDialogContent
 
 class TipDialog(
     context: Context,
@@ -13,20 +15,22 @@ class TipDialog(
 ) : BaseDialog(context) {
 
     init {
-        setContentView(R.layout.dialog_tip)
+        sheetLayoutName = "dialog_tip"
         setCanceledOnTouchOutside(false)
-        val tipInfo = findViewById<TextView>(R.id.tipInfo)
-        val leftBtn = findViewById<TextView>(R.id.leftBtn)
-        val rightBtn = findViewById<TextView>(R.id.rightBtn)
-        tipInfo.text = tip
-        leftBtn.text = left
-        rightBtn.text = right
-        leftBtn.setOnClickListener {
-            listener.left()
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    TipDialogContent(
+                        tip = tip ?: "",
+                        leftText = left ?: "确定",
+                        rightText = right ?: "取消",
+                        onLeftClick = { listener.left() },
+                        onRightClick = { listener.right() }
+                    )
+                }
+            }
         }
-        rightBtn.setOnClickListener {
-            listener.right()
-        }
+        setContentView(composeView)
         setOnCancelListener {
             listener.cancel()
         }

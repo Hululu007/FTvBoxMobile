@@ -1,28 +1,55 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.graphics.Color
-import android.widget.TextView
+import android.view.ViewGroup
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
-import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.LiveSettingGroup
+import com.github.tvbox.osc.ui.compose.LiveSettingGroupItem
 import java.util.ArrayList
 
-class LiveSettingGroupAdapter : BaseQuickAdapter<LiveSettingGroup, BaseViewHolder>(R.layout.item_live_setting_group, ArrayList()) {
+class LiveSettingGroupAdapter : BaseQuickAdapter<LiveSettingGroup, BaseViewHolder>(0, ArrayList()) {
     private var selectedGroupIndex = -1
     private var focusedGroupIndex = -1
 
+    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return BaseViewHolder(composeView)
+    }
+
     override fun convert(holder: BaseViewHolder, group: LiveSettingGroup?) {
         if (group == null) return
-        val tvGroupName = holder.getView<TextView>(R.id.tvSettingGroupName)
-        tvGroupName.text = group.getGroupName()
-        tvGroupName.isSelected = true
+        val composeView = holder.itemView as ComposeView
         val groupIndex = group.getGroupIndex()
-        holder.itemView.isSelected = groupIndex == selectedGroupIndex
-        if (groupIndex == selectedGroupIndex && groupIndex != focusedGroupIndex) {
-            tvGroupName.setTextColor(mContext.resources.getColor(R.color.color_1890FF))
-        } else {
-            tvGroupName.setTextColor(Color.WHITE)
+        val isSelected = groupIndex == selectedGroupIndex
+        val isFocused = groupIndex == focusedGroupIndex
+
+        composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                LiveSettingGroupItem(
+                    groupName = group.getGroupName() ?: "",
+                    isSelected = isSelected,
+                    isFocused = isFocused,
+                    onClick = {
+                        val pos = holder.adapterPosition
+                        if (pos in 0 until data.size) {
+                            onItemClickListener?.onItemClick(this@LiveSettingGroupAdapter, composeView, pos)
+                        }
+                    }
+                )
+            }
         }
     }
 

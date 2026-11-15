@@ -1,10 +1,21 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.platform.ComposeView
+import com.github.tvbox.osc.ui.compose.AboutDialogContent
 
 class AboutDialog(context: Context) : BaseDialog(context) {
     init {
-        setContentView(R.layout.dialog_about)
+        sheetLayoutName = "dialog_about"
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    AboutDialogContent()
+                }
+            }
+        }
+        setContentView(composeView)
     }
 }

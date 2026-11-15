@@ -1,21 +1,52 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.graphics.Typeface
 import android.text.TextUtils
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
-import com.github.tvbox.osc.R
+import com.github.tvbox.osc.ui.compose.SourceChipItem
 import java.util.ArrayList
 
-class FastListAdapter : BaseQuickAdapter<String, BaseViewHolder>(R.layout.item_mobile_source_chip, ArrayList()) {
+class FastListAdapter : BaseQuickAdapter<String, BaseViewHolder>(0, ArrayList()) {
     private var selectedName: String = "全部"
 
+    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return BaseViewHolder(composeView)
+    }
+
     override fun convert(helper: BaseViewHolder, item: String?) {
-        val textView = helper.getView<TextView>(R.id.tvSearchWord)
-        textView.text = item ?: ""
-        updateSelection(textView, item)
+        val text = item ?: ""
+        val isSelected = TextUtils.equals(item, selectedName)
+        val composeView = helper.itemView as ComposeView
+
+        composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                SourceChipItem(
+                    text = text,
+                    isSelected = isSelected,
+                    onClick = {
+                        val position = helper.adapterPosition
+                        if (position in 0 until data.size) {
+                            onItemClickListener?.onItemClick(this@FastListAdapter, composeView, position)
+                        }
+                    }
+                )
+            }
+        }
     }
 
     fun setSelectedName(selectedName: String?) {
@@ -23,18 +54,6 @@ class FastListAdapter : BaseQuickAdapter<String, BaseViewHolder>(R.layout.item_m
     }
 
     fun refreshVisibleSelection(parent: ViewGroup?) {
-        if (parent == null) return
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            if (child is TextView) {
-                updateSelection(child, child.text.toString())
-            }
-        }
-    }
-
-    private fun updateSelection(textView: TextView, item: String?) {
-        val selected = TextUtils.equals(item, selectedName)
-        textView.isSelected = selected
-        textView.setTypeface(Typeface.DEFAULT, if (selected) Typeface.BOLD else Typeface.NORMAL)
+        notifyDataSetChanged()
     }
 }

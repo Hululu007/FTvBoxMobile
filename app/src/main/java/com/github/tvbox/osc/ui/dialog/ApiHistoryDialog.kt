@@ -2,15 +2,48 @@ package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
 import android.os.Bundle
-import android.widget.TextView
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter
-import com.owen.tvrecyclerview.widget.TvRecyclerView
+import com.github.tvbox.osc.ui.compose.ApiHistoryDialogContent
+import java.util.ArrayList
 
 class ApiHistoryDialog(context: Context) : BaseDialog(context, R.style.CustomDialogStyleDim) {
 
+    private var itemsList by mutableStateOf<List<String>>(emptyList())
+    private var selectedIdx by mutableStateOf(0)
+    private var titleText by mutableStateOf("配置历史")
+    private var callback: ApiHistoryDialogAdapter.SelectDialogInterface? = null
+
     init {
-        setContentView(R.layout.dialog_api_history)
+        sheetLayoutName = "dialog_api_history"
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    ApiHistoryDialogContent(
+                        items = itemsList,
+                        selectedIndex = selectedIdx,
+                        title = titleText,
+                        onItemClick = { item, index ->
+                            selectedIdx = index
+                            callback?.click(item)
+                        },
+                        onDeleteClick = { item, index ->
+                            val current = ArrayList(itemsList)
+                            current.remove(item)
+                            itemsList = current
+                            callback?.del(item, current)
+                        }
+                    )
+                }
+            }
+        }
+        setContentView(composeView)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,7 +51,8 @@ class ApiHistoryDialog(context: Context) : BaseDialog(context, R.style.CustomDia
     }
 
     fun setTip(tip: String?) {
-        findViewById<TextView>(R.id.title)?.text = tip
+        titleText = tip ?: "配置历史"
+        setTitle(tip)
     }
 
     fun setAdapter(
@@ -26,13 +60,8 @@ class ApiHistoryDialog(context: Context) : BaseDialog(context, R.style.CustomDia
         data: List<String>?,
         select: Int
     ) {
-        val adapter = ApiHistoryDialogAdapter(sourceBeanSelectDialogInterface)
-        adapter.setData(data, select)
-        val tvRecyclerView = findViewById<TvRecyclerView>(R.id.list)
-        tvRecyclerView.adapter = adapter
-        tvRecyclerView.selectedPosition = select
-        tvRecyclerView.post {
-            tvRecyclerView.scrollToPosition(select)
-        }
+        this.callback = sourceBeanSelectDialogInterface
+        this.itemsList = data ?: emptyList()
+        this.selectedIdx = select
     }
 }

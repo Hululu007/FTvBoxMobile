@@ -1,13 +1,18 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.view.View
+import android.view.ViewGroup
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
-import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.MovieSort
+import com.github.tvbox.osc.ui.compose.HomeSortItem
 import java.util.ArrayList
 
-class SortAdapter : BaseQuickAdapter<MovieSort.SortData, BaseViewHolder>(R.layout.item_home_sort, ArrayList()) {
+class SortAdapter : BaseQuickAdapter<MovieSort.SortData, BaseViewHolder>(0, ArrayList()) {
     private var selectedPosition = 0
 
     fun setSelectedPosition(position: Int) {
@@ -17,12 +22,40 @@ class SortAdapter : BaseQuickAdapter<MovieSort.SortData, BaseViewHolder>(R.layou
         notifyItemChanged(position)
     }
 
+    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return BaseViewHolder(composeView)
+    }
+
     override fun convert(helper: BaseViewHolder, item: MovieSort.SortData?) {
         if (item == null) return
-        helper.setText(R.id.tvTitle, item.name ?: "")
+        val title = item.name ?: ""
         val selected = helper.adapterPosition == selectedPosition
-        helper.itemView.isSelected = selected
         val hasFilters = item.filters != null && item.filters.isNotEmpty()
-        helper.getView<View>(R.id.tvFilter).visibility = if (selected && hasFilters) View.VISIBLE else View.GONE
+        val composeView = helper.itemView as ComposeView
+
+        composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                HomeSortItem(
+                    title = title,
+                    isSelected = selected,
+                    hasFilters = hasFilters,
+                    onClick = {
+                        val position = helper.adapterPosition
+                        if (position in 0 until data.size) {
+                            onItemClickListener?.onItemClick(this@SortAdapter, composeView, position)
+                        }
+                    }
+                )
+            }
+        }
     }
 }

@@ -49,7 +49,9 @@ abstract class BaseLazyFragment : Fragment(), CustomAdapt {
         if (act != null) {
             AutoSize.autoConvertDensity(act, sizeInDp, isBaseOnWidth)
         }
-        rootView = inflater.inflate(getLayoutResID(), container, false)
+        val layoutId = getLayoutResID()
+        val composeLayout = com.github.tvbox.osc.ui.compose.ComposeLayouts.createFragmentLayout(requireContext(), layoutId)
+        rootView = composeLayout ?: inflater.inflate(layoutId, container, false)
         isViewCreated = true
         return rootView
     }

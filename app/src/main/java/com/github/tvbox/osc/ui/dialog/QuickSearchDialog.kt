@@ -1,29 +1,54 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.event.RefreshEvent
-import com.github.tvbox.osc.ui.adapter.QuickSearchAdapter
-import com.github.tvbox.osc.ui.adapter.SearchWordAdapter
-import com.owen.tvrecyclerview.widget.TvRecyclerView
-import com.owen.tvrecyclerview.widget.V7LinearLayoutManager
+import com.github.tvbox.osc.ui.compose.QuickSearchDialogContent
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import java.util.ArrayList
 
 class QuickSearchDialog(context: Context) : BaseDialog(context, R.style.CustomDialogStyleDim) {
-    private lateinit var searchWordAdapter: SearchWordAdapter
-    private lateinit var searchAdapter: QuickSearchAdapter
-    private lateinit var mGridView: TvRecyclerView
-    private lateinit var mGridViewWord: TvRecyclerView
+    private var wordsList by mutableStateOf<List<String>>(emptyList())
+    private var resultsList by mutableStateOf<List<Movie.Video>>(emptyList())
 
     init {
+        sheetLayoutName = "dialog_quick_search"
         setCanceledOnTouchOutside(false)
         setCancelable(true)
-        setContentView(R.layout.dialog_quick_search)
-        init(context)
+
+        EventBus.getDefault().register(this)
+        setOnDismissListener {
+            EventBus.getDefault().unregister(this)
+        }
+
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    QuickSearchDialogContent(
+                        words = wordsList,
+                        results = resultsList,
+                        onWordClick = { word ->
+                            resultsList = emptyList()
+                            EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD_CHANGE, word))
+                        },
+                        onVideoClick = { video ->
+                            EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_SELECT, video))
+                            dismiss()
+                        }
+                    )
+                }
+            }
+        }
+        setContentView(composeView)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -31,42 +56,15 @@ class QuickSearchDialog(context: Context) : BaseDialog(context, R.style.CustomDi
         if (event.type == RefreshEvent.TYPE_QUICK_SEARCH) {
             val data = event.obj as? List<Movie.Video>
             if (data != null) {
-                searchAdapter.addData(data)
+                val current = ArrayList(resultsList)
+                current.addAll(data)
+                resultsList = current
             }
         } else if (event.type == RefreshEvent.TYPE_QUICK_SEARCH_WORD) {
             val data = event.obj as? List<String>
             if (data != null) {
-                searchWordAdapter.setNewData(data)
+                wordsList = data
             }
         }
-    }
-
-    private fun init(context: Context) {
-        EventBus.getDefault().register(this)
-        setOnDismissListener {
-            EventBus.getDefault().unregister(this)
-        }
-        mGridView = findViewById(R.id.mGridView)
-        searchAdapter = QuickSearchAdapter()
-        mGridView.setHasFixedSize(true)
-        mGridView.layoutManager = V7LinearLayoutManager(context, 1, false)
-        mGridView.adapter = searchAdapter
-        searchAdapter.setOnItemClickListener { _, _, position ->
-            val video = searchAdapter.data[position]
-            EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_SELECT, video))
-            dismiss()
-        }
-        searchAdapter.setNewData(ArrayList())
-
-        searchWordAdapter = SearchWordAdapter()
-        mGridViewWord = findViewById(R.id.mGridViewWord)
-        mGridViewWord.adapter = searchWordAdapter
-        mGridViewWord.layoutManager = V7LinearLayoutManager(context, 0, false)
-        searchWordAdapter.setOnItemClickListener { _, _, position ->
-            searchAdapter.data.clear()
-            searchAdapter.notifyDataSetChanged()
-            EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD_CHANGE, searchWordAdapter.data[position]))
-        }
-        searchWordAdapter.setNewData(ArrayList())
     }
 }

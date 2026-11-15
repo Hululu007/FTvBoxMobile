@@ -1,16 +1,16 @@
 package com.github.tvbox.osc.ui.adapter
 
 import android.annotation.SuppressLint
-import android.graphics.Color
-import android.graphics.Typeface
-import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.github.tvbox.osc.R
+import com.github.tvbox.osc.ui.compose.SelectButtonItem
 import java.util.ArrayList
 
 class ButtonAdapter<T : Any>(
@@ -23,7 +23,7 @@ class ButtonAdapter<T : Any>(
         fun getDisplay(value: T): String
     }
 
-    class SelectViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+    class SelectViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView)
 
     private val data = ArrayList<T>()
     private var select = 0
@@ -40,29 +40,38 @@ class ButtonAdapter<T : Any>(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SelectViewHolder {
-        return SelectViewHolder(
-            LayoutInflater.from(parent.context).inflate(R.layout.item_button, parent, false)
-        )
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return SelectViewHolder(composeView)
     }
 
     override fun onBindViewHolder(holder: SelectViewHolder, @SuppressLint("RecyclerView") position: Int) {
         val value = data[position]
-        val item = holder.itemView.findViewById<TextView>(R.id.tvName)
-        item.text = dialogInterface.getDisplay(value)
-        if (position == select) {
-            item.setTextColor(-0xfd071f) // 0xff02f8e1
-            item.typeface = Typeface.defaultFromStyle(Typeface.BOLD)
-        } else {
-            item.setTextColor(Color.WHITE)
-            item.typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
-        }
-        holder.itemView.setOnClickListener {
-            if (position == select) return@setOnClickListener
-            val oldSelect = select
-            select = position
-            notifyItemChanged(oldSelect)
-            notifyItemChanged(select)
-            dialogInterface.click(value, position)
+        val text = dialogInterface.getDisplay(value)
+        val isSelected = position == select
+
+        holder.composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                SelectButtonItem(
+                    text = text,
+                    isSelected = isSelected,
+                    onClick = {
+                        if (position == select) return@SelectButtonItem
+                        val oldSelect = select
+                        select = position
+                        notifyItemChanged(oldSelect)
+                        notifyItemChanged(select)
+                        dialogInterface.click(value, position)
+                    }
+                )
+            }
         }
     }
 }

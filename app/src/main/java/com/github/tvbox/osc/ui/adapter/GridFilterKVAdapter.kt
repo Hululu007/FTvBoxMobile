@@ -1,13 +1,17 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.graphics.Color
-import android.widget.TextView
+import android.view.ViewGroup
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
-import com.github.tvbox.osc.R
+import com.github.tvbox.osc.ui.compose.GridFilterValueItem
 import java.util.ArrayList
 
-class GridFilterKVAdapter : BaseQuickAdapter<String, BaseViewHolder>(R.layout.item_grid_filter_value, ArrayList()) {
+class GridFilterKVAdapter : BaseQuickAdapter<String, BaseViewHolder>(0, ArrayList()) {
     private var selectedPosition = -1
 
     fun setSelectedPosition(position: Int) {
@@ -15,12 +19,37 @@ class GridFilterKVAdapter : BaseQuickAdapter<String, BaseViewHolder>(R.layout.it
         notifyDataSetChanged()
     }
 
+    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return BaseViewHolder(composeView)
+    }
+
     override fun convert(helper: BaseViewHolder, item: String?) {
-        helper.setText(R.id.filterValue, item ?: "")
+        val text = item ?: ""
         val selected = helper.layoutPosition == selectedPosition
-        val label = helper.getView<TextView>(R.id.filterValue)
-        label.isSelected = selected
-        label.paint.isFakeBoldText = selected
-        label.setTextColor(if (selected) -0xfd071f else Color.WHITE) // 0xFF02F8E1
+        val composeView = helper.itemView as ComposeView
+
+        composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                GridFilterValueItem(
+                    text = text,
+                    isSelected = selected,
+                    onClick = {
+                        val position = helper.adapterPosition
+                        if (position in 0 until data.size) {
+                            onItemClickListener?.onItemClick(this@GridFilterKVAdapter, composeView, position)
+                        }
+                    }
+                )
+            }
+        }
     }
 }

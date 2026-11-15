@@ -1,34 +1,46 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
-import android.widget.ImageView
-import android.widget.TextView
-import com.github.tvbox.osc.R
+import android.graphics.Bitmap
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.server.ControlManager
+import com.github.tvbox.osc.ui.compose.RemoteDialogContent
 import com.github.tvbox.osc.ui.tv.QRCodeGen
 import me.jessyan.autosize.utils.AutoSizeUtils
 
 class RemoteDialog(context: Context) : BaseDialog(context) {
-    private val ivQRCode: ImageView
-    private val tvAddress: TextView
+    private var addressText by mutableStateOf("")
+    private var qrBitmapState by mutableStateOf<Bitmap?>(null)
 
     init {
-        setContentView(R.layout.dialog_remote)
+        sheetLayoutName = "dialog_remote"
         setCanceledOnTouchOutside(false)
-        ivQRCode = findViewById(R.id.ivQRCode)
-        tvAddress = findViewById(R.id.tvAddress)
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    RemoteDialogContent(
+                        address = addressText,
+                        qrBitmap = qrBitmapState
+                    )
+                }
+            }
+        }
+        setContentView(composeView)
         refreshQRCode()
     }
 
     private fun refreshQRCode() {
         val address = ControlManager.get().getAddress(false)
-        tvAddress.text = String.format("手机/电脑扫描上方二维码或者直接浏览器访问地址\n%s", address)
-        ivQRCode.setImageBitmap(
-            QRCodeGen.generateBitmap(
-                address,
-                AutoSizeUtils.mm2px(context, 240f),
-                AutoSizeUtils.mm2px(context, 240f)
-            )
+        addressText = address ?: ""
+        qrBitmapState = QRCodeGen.generateBitmap(
+            address,
+            AutoSizeUtils.mm2px(context, 240f),
+            AutoSizeUtils.mm2px(context, 240f)
         )
     }
 }

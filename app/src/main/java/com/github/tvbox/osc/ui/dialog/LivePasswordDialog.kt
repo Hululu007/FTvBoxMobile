@@ -2,8 +2,10 @@ package com.github.tvbox.osc.ui.dialog
 
 import android.app.Activity
 import android.content.Context
-import android.widget.EditText
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.platform.ComposeView
+import com.github.tvbox.osc.ui.compose.LivePasswordDialogContent
 
 /**
  * 描述
@@ -12,22 +14,28 @@ import com.github.tvbox.osc.R
  * @since 2020/12/27
  */
 class LivePasswordDialog(context: Context) : BaseDialog(context) {
-    private val inputPassword: EditText
     private var listener: OnListener? = null
 
     init {
+        sheetLayoutName = "dialog_live_password"
         if (context is Activity) {
             setOwnerActivity(context)
         }
-        setContentView(R.layout.dialog_live_password)
-        inputPassword = findViewById(R.id.input)
-        findViewById<android.view.View>(R.id.inputSubmit).setOnClickListener {
-            val password = inputPassword.text.toString().trim()
-            if (password.isNotEmpty()) {
-                listener?.onChange(password)
-                dismiss()
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    LivePasswordDialogContent(
+                        onSubmit = { password ->
+                            if (password.isNotEmpty()) {
+                                listener?.onChange(password)
+                                dismiss()
+                            }
+                        }
+                    )
+                }
             }
         }
+        setContentView(composeView)
     }
 
     override fun onBackPressed() {

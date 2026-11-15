@@ -1,28 +1,57 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.graphics.Color
-import android.widget.TextView
+import android.view.ViewGroup
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
-import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.LiveEpgDate
+import com.github.tvbox.osc.ui.compose.LiveChannelGroupItem
 import java.util.ArrayList
 
-class LiveEpgDateAdapter : BaseQuickAdapter<LiveEpgDate, BaseViewHolder>(R.layout.item_live_channel_group, ArrayList()) {
+class LiveEpgDateAdapter : BaseQuickAdapter<LiveEpgDate, BaseViewHolder>(0, ArrayList()) {
 
     private var selectedIndex = -1
     private var focusedIndex = -1
 
+    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
+        val composeView = ComposeView(parent.context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        }
+        return BaseViewHolder(composeView)
+    }
+
     override fun convert(holder: BaseViewHolder, item: LiveEpgDate?) {
         if (item == null) return
-        val tvGroupName = holder.getView<TextView>(R.id.tvChannelGroupName)
-        tvGroupName.text = item.getDatePresented() ?: ""
-        tvGroupName.setBackgroundColor(Color.TRANSPARENT)
+        val composeView = holder.itemView as ComposeView
         val itemIndex = item.getIndex()
-        if (itemIndex == selectedIndex && itemIndex != focusedIndex) {
-            tvGroupName.setTextColor(mContext.resources.getColor(R.color.color_1890FF))
-        } else {
-            tvGroupName.setTextColor(mContext.resources.getColor(R.color.color_CCFFFFFF))
+        val isSelected = itemIndex == selectedIndex
+        val isFocused = itemIndex == focusedIndex
+
+        composeView.setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFFAEC6FF),
+                    background = Color(0xFF10131A),
+                    surface = Color(0xFF171C26),
+                )
+            ) {
+                LiveChannelGroupItem(
+                    groupName = item.getDatePresented() ?: "",
+                    isSelected = isSelected,
+                    isFocused = isFocused,
+                    isEpgDateMode = true,
+                    onClick = {
+                        val pos = holder.adapterPosition
+                        if (pos in 0 until data.size) {
+                            onItemClickListener?.onItemClick(this@LiveEpgDateAdapter, composeView, pos)
+                        }
+                    }
+                )
+            }
         }
     }
 

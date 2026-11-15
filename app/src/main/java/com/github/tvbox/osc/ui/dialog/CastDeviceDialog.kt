@@ -4,19 +4,18 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
-import androidx.recyclerview.widget.RecyclerView
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.dlna.CastDevice
 import com.github.tvbox.osc.dlna.CastVideo
 import com.github.tvbox.osc.dlna.DLNACastManager
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
-import com.owen.tvrecyclerview.widget.TvRecyclerView
+import com.github.tvbox.osc.ui.compose.CastDialogContent
 import okhttp3.Call
 import okhttp3.Response
 import org.json.JSONObject
@@ -29,35 +28,30 @@ import java.util.LinkedHashMap
 class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDialog(context) {
     private val handler = Handler(Looper.getMainLooper())
     private val devices: MutableMap<String, CastDevice> = LinkedHashMap()
-    private val adapter = DeviceAdapter()
     private var onCastListener: OnCastListener? = null
-    private var title: TextView? = null
-    private var progressBar: ProgressBar? = null
-    private var tvScanning: TextView? = null
-    private var tvEmpty: TextView? = null
-    private var searchFinished = false
+    private var searchFinished by mutableStateOf(false)
+    private var deviceList by mutableStateOf<List<CastDevice>>(emptyList())
 
     init {
-        setContentView(R.layout.dialog_cast)
+        sheetLayoutName = "dialog_cast"
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    CastDialogContent(
+                        devices = deviceList,
+                        isSearching = !searchFinished && deviceList.isEmpty(),
+                        onDeviceClick = { device -> castToDevice(device) },
+                        onRefresh = { refreshDevices() },
+                        onCancel = { dismiss() }
+                    )
+                }
+            }
+        }
+        setContentView(composeView)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = findViewById(R.id.title)
-        progressBar = findViewById(R.id.progressBar)
-        tvScanning = findViewById(R.id.tvScanning)
-        tvEmpty = findViewById(R.id.tvEmpty)
-        val btnRefresh = findViewById<TextView>(R.id.btnRefresh)
-        val btnCancel = findViewById<TextView>(R.id.btnCancel)
-        val list = findViewById<TvRecyclerView>(R.id.list)
-        list.adapter = adapter
-        title?.text = "投屏到设备"
-        btnRefresh.setOnClickListener {
-            refreshDevices()
-        }
-        btnCancel.setOnClickListener {
-            dismiss()
-        }
         searchDevices()
     }
 
@@ -73,12 +67,10 @@ class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDia
 
     private fun searchDevices() {
         searchFinished = false
-        updateState()
         searchTvBoxDevices()
         searchDlnaDevices()
         handler.postDelayed({
             searchFinished = true
-            updateState()
         }, 15000)
     }
 
@@ -87,7 +79,7 @@ class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDia
         DLNACastManager.get().setDeviceListener(null)
         DLNACastManager.get().release(context)
         devices.clear()
-        adapter.setData(ArrayList())
+        deviceList = emptyList()
         searchDevices()
     }
 
@@ -103,7 +95,7 @@ class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDia
                 override fun fail(all: Boolean, end: Boolean) {
                     if (end) {
                         handler.post {
-                            updateState()
+                            // finished
                         }
                     }
                 }
@@ -127,17 +119,7 @@ class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDia
 
     private fun addDevice(device: CastDevice) {
         devices[device.type.toString() + ":" + device.id] = device
-        adapter.setData(ArrayList(devices.values))
-        updateState()
-    }
-
-    private fun updateState() {
-        val t = title ?: return
-        t.text = "投屏到设备"
-        val hasDevice = devices.isNotEmpty()
-        progressBar?.visibility = if (!hasDevice && !searchFinished) View.VISIBLE else View.GONE
-        tvScanning?.visibility = if (!hasDevice && !searchFinished) View.VISIBLE else View.GONE
-        tvEmpty?.visibility = if (!hasDevice && searchFinished) View.VISIBLE else View.GONE
+        deviceList = ArrayList(devices.values)
     }
 
     private fun castToDevice(device: CastDevice) {
@@ -205,36 +187,5 @@ class CastDeviceDialog(context: Context, private val video: CastVideo) : BaseDia
     interface OnCastListener {
         fun onCastSuccess()
         fun onCastFailed()
-    }
-
-    private inner class DeviceAdapter : RecyclerView.Adapter<DeviceAdapter.DeviceHolder>() {
-        private val data: MutableList<CastDevice> = ArrayList()
-
-        fun setData(devices: List<CastDevice>) {
-            data.clear()
-            data.addAll(devices)
-            notifyDataSetChanged()
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DeviceHolder {
-            return DeviceHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_cast_device, parent, false))
-        }
-
-        override fun onBindViewHolder(holder: DeviceHolder, position: Int) {
-            val device = data[position]
-            val name = holder.itemView.findViewById<TextView>(R.id.tvDeviceName)
-            val ip = holder.itemView.findViewById<TextView>(R.id.tvDeviceIp)
-            name.text = device.name
-            ip.text = (if (device.type == CastDevice.TYPE_DLNA) "DLNA  " else "TVBox  ") + device.id
-            holder.itemView.setOnClickListener {
-                castToDevice(device)
-            }
-        }
-
-        override fun getItemCount(): Int {
-            return data.size
-        }
-
-        inner class DeviceHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
     }
 }

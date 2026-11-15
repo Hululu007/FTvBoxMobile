@@ -6,17 +6,20 @@ import android.content.Intent
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import android.widget.Toast
-import com.github.tvbox.osc.R
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.base.App
 import com.github.tvbox.osc.data.AppDataManager
-import com.github.tvbox.osc.ui.adapter.BackupAdapter
+import com.github.tvbox.osc.ui.compose.BackupDialogContent
 import com.github.tvbox.osc.util.FileUtils
 import com.hjq.permissions.OnPermissionCallback
 import com.hjq.permissions.Permission
 import com.hjq.permissions.XXPermissions
-import com.owen.tvrecyclerview.widget.TvRecyclerView
 import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
@@ -27,52 +30,64 @@ import java.util.Locale
 
 class BackupDialog(context: Context) : BaseDialog(context) {
 
-    init {
-        setContentView(R.layout.dialog_backup)
-        val tvRecyclerView = findViewById<TvRecyclerView>(R.id.list)
-        val adapter = BackupAdapter()
-        tvRecyclerView.adapter = adapter
-        adapter.setNewData(allBackup())
-        adapter.setOnItemChildClickListener { ad, view, position ->
-            val item = ad.getItem(position) as? String ?: return@setOnItemChildClickListener
-            if (view.id == R.id.tvName) {
-                restore(item)
-            } else if (view.id == R.id.tvDel) {
-                delete(item)
-                adapter.setNewData(allBackup())
-            }
-        }
-        findViewById<View>(R.id.backupNow).setOnClickListener {
-            backup()
-            adapter.setNewData(allBackup())
-        }
-        findViewById<View>(R.id.storagePermission).setOnClickListener {
-            if (XXPermissions.isGranted(context, Permission.Group.STORAGE)) {
-                Toast.makeText(context, "已获得存储权限", Toast.LENGTH_SHORT).show()
-            } else {
-                XXPermissions.with(context)
-                    .permission(Permission.Group.STORAGE)
-                    .request(object : OnPermissionCallback {
-                        override fun onGranted(permissions: List<String>, all: Boolean) {
-                            if (all) {
-                                adapter.setNewData(allBackup())
-                                Toast.makeText(context, "已获得存储权限", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+    private var backupList by mutableStateOf<List<String>>(emptyList())
 
-                        override fun onDenied(permissions: List<String>, never: Boolean) {
-                            if (never) {
-                                Toast.makeText(context, "获取存储权限失败,请在系统设置中开启", Toast.LENGTH_SHORT).show()
-                                val act = context as? Activity
-                                if (act != null) {
-                                    XXPermissions.startPermissionActivity(act, permissions)
-                                }
-                            } else {
-                                Toast.makeText(context, "获取存储权限失败", Toast.LENGTH_SHORT).show()
-                            }
+    init {
+        sheetLayoutName = "dialog_backup"
+        backupList = allBackup()
+
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MaterialTheme(colorScheme = darkColorScheme()) {
+                    BackupDialogContent(
+                        backupList = backupList,
+                        onBackupNow = {
+                            backup()
+                            backupList = allBackup()
+                        },
+                        onStoragePermission = {
+                            requestStoragePermission()
+                        },
+                        onRestore = { item ->
+                            restore(item)
+                        },
+                        onDelete = { item ->
+                            delete(item)
+                            backupList = allBackup()
                         }
-                    })
+                    )
+                }
             }
+        }
+        setContentView(composeView)
+    }
+
+    private fun requestStoragePermission() {
+        if (XXPermissions.isGranted(context, Permission.Group.STORAGE)) {
+            Toast.makeText(context, "已获得存储权限", Toast.LENGTH_SHORT).show()
+        } else {
+            XXPermissions.with(context)
+                .permission(Permission.Group.STORAGE)
+                .request(object : OnPermissionCallback {
+                    override fun onGranted(permissions: List<String>, all: Boolean) {
+                        if (all) {
+                            backupList = allBackup()
+                            Toast.makeText(context, "已获得存储权限", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    override fun onDenied(permissions: List<String>, never: Boolean) {
+                        if (never) {
+                            Toast.makeText(context, "获取存储权限失败,请在系统设置中开启", Toast.LENGTH_SHORT).show()
+                            val act = context as? Activity
+                            if (act != null) {
+                                XXPermissions.startPermissionActivity(act, permissions)
+                            }
+                        } else {
+                            Toast.makeText(context, "获取存储权限失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                })
         }
     }
 
