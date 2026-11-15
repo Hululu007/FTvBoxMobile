@@ -120,14 +120,13 @@ class HistoryActivity : BaseActivity() {
                     putString("id", vodInfo.id)
                     putString("sourceKey", vodInfo.sourceKey)
                 }
-                val sourceBean = ApiConfig.get().getSource(vodInfo.sourceKey)
-                if (sourceBean != null) {
+                withVodConfig {
+                    val sourceBean = ApiConfig.get().getSource(vodInfo.sourceKey)
                     bundle.putString("title", vodInfo.name)
-                    bundle.putString("picture", vodInfo.pic)
-                    jumpActivity(DetailActivity::class.java, bundle)
-                } else {
-                    bundle.putString("title", vodInfo.name)
-                    if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
+                    if (sourceBean != null) {
+                        bundle.putString("picture", vodInfo.pic)
+                        jumpActivity(DetailActivity::class.java, bundle)
+                    } else if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
                         jumpActivity(FastSearchActivity::class.java, bundle)
                     } else {
                         jumpActivity(SearchActivity::class.java, bundle)

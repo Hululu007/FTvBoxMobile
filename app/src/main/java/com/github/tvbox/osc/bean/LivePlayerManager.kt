@@ -14,7 +14,16 @@ class LivePlayerManager {
 
     fun init(videoView: VideoView<*>) {
         try {
-            defaultPlayerConfig.put("pl", Hawk.get(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 2)))
+            val defaultPlayerType = Hawk.get(HawkConfig.PLAY_TYPE, 2)
+            // Older configurations stored playerType as a string; read it without an Int cast.
+            val storedPlayerType = Hawk.get<Any?>(HawkConfig.LIVE_PLAY_TYPE, null)
+            val playerType = when (storedPlayerType) {
+                is Number -> storedPlayerType.toInt()
+                is String -> storedPlayerType.trim().toIntOrNull() ?: defaultPlayerType
+                else -> defaultPlayerType
+            }
+            Hawk.put(HawkConfig.LIVE_PLAY_TYPE, playerType)
+            defaultPlayerConfig.put("pl", playerType)
             if (defaultPlayerConfig.optInt("pl", 2) == 0) {
                 defaultPlayerConfig.put("pl", 2)
             }

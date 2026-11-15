@@ -746,20 +746,7 @@ class VodController(context: Context) : BaseController(context) {
                 e.printStackTrace()
             }
         }
-        mPlayerTimeStartBtn?.setOnClickListener {
-            myHandle?.removeCallbacks(myRunnable!!)
-            myHandle?.postDelayed(myRunnable!!, myHandleSeconds.toLong())
-            try {
-                val current = safeTimeMs(mControlWrapper.getCurrentPosition())
-                val duration = safeTimeMs(mControlWrapper.getDuration())
-                if (current > duration / 2) return@setOnClickListener
-                mPlayerConfig?.put("st", current / 1000)
-                updatePlayerCfgView()
-                listener?.updatePlayerCfg()
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
-        }
+        mPlayerTimeStartBtn?.setOnClickListener { showSkipTimeDialog("st", "片头") }
         setOnTvLongClickListener(mPlayerTimeStartBtn) {
             try {
                 mPlayerConfig?.put("st", 0)
@@ -770,20 +757,7 @@ class VodController(context: Context) : BaseController(context) {
             }
             true
         }
-        mPlayerTimeSkipBtn?.setOnClickListener {
-            myHandle?.removeCallbacks(myRunnable!!)
-            myHandle?.postDelayed(myRunnable!!, myHandleSeconds.toLong())
-            try {
-                val current = safeTimeMs(mControlWrapper.getCurrentPosition())
-                val duration = safeTimeMs(mControlWrapper.getDuration())
-                if (current < duration / 2) return@setOnClickListener
-                mPlayerConfig?.put("et", (duration - current) / 1000)
-                updatePlayerCfgView()
-                listener?.updatePlayerCfg()
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
-        }
+        mPlayerTimeSkipBtn?.setOnClickListener { showSkipTimeDialog("et", "片尾") }
         setOnTvLongClickListener(mPlayerTimeSkipBtn) {
             try {
                 mPlayerConfig?.put("et", 0)
@@ -852,6 +826,7 @@ class VodController(context: Context) : BaseController(context) {
         seekTime?.visibility = disPlay
         net_play_speed?.visibility = disPlay
         mPlayPauseTime?.visibility = disPlay
+        mScreenDisplay?.isSelected = disPlay == VISIBLE
         mScreenDisplay?.setTextColor(if (disPlay == VISIBLE) resources.getColor(R.color.color_02F8E1) else Color.WHITE)
         mScreenDisplay?.setOnClickListener {
             val nextDisPlay = if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == VISIBLE) GONE else VISIBLE
@@ -859,6 +834,7 @@ class VodController(context: Context) : BaseController(context) {
             net_play_speed?.visibility = nextDisPlay
             if (nextDisPlay == VISIBLE) mPlayPauseTime?.visibility = nextDisPlay
             Hawk.put(HawkConfig.SCREEN_DISPLAY, nextDisPlay)
+            mScreenDisplay?.isSelected = nextDisPlay == VISIBLE
             mScreenDisplay?.setTextColor(if (nextDisPlay == VISIBLE) resources.getColor(R.color.color_02F8E1) else Color.WHITE)
             hideBottom()
         }
@@ -873,6 +849,129 @@ class VodController(context: Context) : BaseController(context) {
         mScreenDisplay?.nextFocusRightId = R.id.play_next
         mNextBtn?.nextFocusLeftId = R.id.screen_display
         com.fbox.mobile.MobilePlayerControls.install(this)
+    }
+
+    private fun showSkipTimeDialog(key: String, title: String) {
+        val activity = mActivity ?: return
+        val config = mPlayerConfig ?: return
+        val dialog = com.github.tvbox.osc.ui.dialog.BaseDialog(activity)
+        dialog.setTitle("${title}设置")
+        // Capture once so the displayed shortcut and saved value refer to the same position.
+        val position = mControlWrapper.getCurrentPosition()
+        val duration = mControlWrapper.getDuration()
+        val shortcutMs = when {
+            position < 0 -> null
+            key == "st" -> position.takeIf { duration <= 0 || it < duration }
+            duration > 0 && position < duration -> duration - position
+            else -> null
+        }
+        val shortcutSeconds = shortcutMs?.div(1000)?.takeIf { it <= Int.MAX_VALUE }?.toInt()
+        val shortcutTitle = if (key == "st") "使用当前进度" else "使用剩余时间"
+        val body = android.widget.LinearLayout(activity).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+        body.addView(TextView(activity).apply {
+            text = if (shortcutSeconds != null) {
+                "取打开设置时的播放进度，点击即保存。也可输入秒数，0 表示不跳过。"
+            } else {
+                "暂未获取有效的${if (key == "st") "播放进度" else "剩余时间"}，可手动输入秒数，0 表示不跳过。"
+            }
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            setPadding(0, 0, 0, com.fbox.mobile.MobileSheets.dp(activity, 12f))
+        })
+        val input = android.widget.EditText(activity).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+            setSingleLine(true)
+            setText(config.optInt(key, 0).toString())
+            setSelectAllOnFocus(true)
+            contentDescription = "${title}时长（秒）"
+            setTextColor(Color.WHITE)
+            setBackgroundResource(R.drawable.mobile_input)
+            val padding = com.fbox.mobile.MobileSheets.dp(activity, 12f)
+            setPadding(padding, padding, padding, padding)
+        }
+        body.addView(input, android.widget.LinearLayout.LayoutParams(-1, com.fbox.mobile.MobileSheets.dp(activity, 56f)))
+        val validation = TextView(activity).apply {
+            setTextColor(0xFFFF8A80.toInt())
+            textSize = 13f
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+            visibility = GONE
+            setPadding(0, com.fbox.mobile.MobileSheets.dp(activity, 8f), 0, 0)
+        }
+        body.addView(validation, LinearLayout.LayoutParams(-1, -2))
+        fun showError(message: String) {
+            input.error = message
+            validation.text = message
+            validation.visibility = VISIBLE
+        }
+        fun save(seconds: Int) {
+            val duration = mControlWrapper.getDuration()
+            val other = config.optInt(if (key == "st") "et" else "st", 0)
+            if (seconds < 0 || (seconds > 0 && duration > 0 && (seconds.toLong() + other) * 1000 >= duration)) {
+                showError("片头和片尾总时长必须小于视频时长")
+                return
+            }
+            config.put(key, seconds)
+            updatePlayerCfgView()
+            listener?.updatePlayerCfg()
+            com.fbox.mobile.MobileSheets.hideKeyboard(input)
+            dialog.dismiss()
+        }
+        fun submit() {
+            val seconds = input.text.toString().trim().toIntOrNull()
+            if (seconds == null) showError("请输入有效的秒数") else save(seconds)
+        }
+        val shortcutLabel = if (shortcutSeconds != null) {
+            "$shortcutTitle · ${stringForTime(safeTimeMs(shortcutSeconds.toLong() * 1000))}"
+        } else "$shortcutTitle · 暂不可用"
+        val shortcut = LinearLayout(activity).apply {
+            gravity = android.view.Gravity.CENTER
+            minimumHeight = com.fbox.mobile.MobileSheets.dp(activity, 56f)
+            val padding = com.fbox.mobile.MobileSheets.dp(activity, 12f)
+            setPadding(padding, padding, padding, padding)
+            setBackgroundResource(R.drawable.mobile_surface)
+            contentDescription = shortcutLabel
+            isEnabled = shortcutSeconds != null
+            isFocusable = isEnabled
+            alpha = if (isEnabled) 1f else 0.5f
+            addView(ImageView(activity).apply {
+                setImageResource(if (key == "st") R.drawable.ic_action_intro else R.drawable.ic_action_outro)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(com.fbox.mobile.MobileSheets.dp(activity, 22f),
+                com.fbox.mobile.MobileSheets.dp(activity, 22f)).apply {
+                marginEnd = com.fbox.mobile.MobileSheets.dp(activity, 8f)
+            })
+            addView(TextView(activity).apply {
+                text = shortcutLabel
+                textSize = 15f
+                setTextColor(Color.WHITE)
+                gravity = android.view.Gravity.CENTER
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            setOnClickListener { shortcutSeconds?.let { save(it) } }
+        }
+        body.addView(shortcut, 0, LinearLayout.LayoutParams(-1, -2).apply {
+            bottomMargin = com.fbox.mobile.MobileSheets.dp(activity, 12f)
+        })
+        input.setOnEditorActionListener { _, action, _ ->
+            if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) { submit(); true } else false
+        }
+        val actions = android.widget.LinearLayout(activity).apply { gravity = android.view.Gravity.END }
+        val reset = com.fbox.mobile.MobileSheets.action(activity, "不跳过$title").apply { setOnClickListener { save(0) } }
+        val confirm = com.fbox.mobile.MobileSheets.action(activity, "保存${title}时长").apply { setOnClickListener { submit() } }
+        com.fbox.mobile.MobileActions.bind(reset, R.drawable.ic_action_reset, "不跳过$title")
+        com.fbox.mobile.MobileActions.bind(confirm, R.drawable.ic_action_save, "保存${title}时长")
+        actions.addView(reset, android.widget.LinearLayout.LayoutParams(com.fbox.mobile.MobileSheets.dp(activity, 48f), -2).apply {
+            marginEnd = com.fbox.mobile.MobileSheets.dp(activity, 8f)
+        })
+        actions.addView(confirm, android.widget.LinearLayout.LayoutParams(com.fbox.mobile.MobileSheets.dp(activity, 48f), -2))
+        body.addView(actions, android.widget.LinearLayout.LayoutParams(-1, -2).apply {
+            topMargin = com.fbox.mobile.MobileSheets.dp(activity, 12f)
+        })
+        dialog.setContentView(body)
+        dialog.show()
     }
 
     private fun showScaleDialog() {
@@ -960,8 +1059,8 @@ class VodController(context: Context) : BaseController(context) {
         if (mControlWrapper != null && mControlWrapper.getDuration() == 0L) {
             mPlayerSpeedBtn?.visibility = GONE
             mPlayerTimeStartEndText?.visibility = GONE
-            mPlayerTimeStartBtn?.visibility = GONE
-            mPlayerTimeSkipBtn?.visibility = GONE
+            mPlayerTimeStartBtn?.visibility = VISIBLE
+            mPlayerTimeSkipBtn?.visibility = VISIBLE
             mPlayerTimeResetBtn?.visibility = GONE
         } else {
             mPlayerSpeedBtn?.visibility = View.VISIBLE
@@ -974,6 +1073,11 @@ class VodController(context: Context) : BaseController(context) {
 
     fun initLandscapePortraitBtnInfo() {
         val isPortrait = resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+        // The landscape back button occupies the top start corner; keep the title beside it.
+        val titleInset = if (!isPortrait && !ScreenUtils.isTv(context)) {
+            com.fbox.mobile.MobileSheets.dp(context, 48f)
+        } else 0
+        mTopRoot1?.apply { setPaddingRelative(titleInset, paddingTop, paddingEnd, paddingBottom) }
         mCurrentTime?.visibility = if (isPortrait) GONE else VISIBLE
         mTotalTime?.visibility = if (isPortrait) GONE else VISIBLE
         if (isPortrait) {
@@ -1005,15 +1109,15 @@ class VodController(context: Context) : BaseController(context) {
             mPlayerScaleBtn?.visibility = GONE
             mPlayerIJKBtn?.visibility = GONE
             mPlayerTimeStartEndText?.visibility = GONE
-            mPlayerTimeStartBtn?.visibility = GONE
-            mPlayerTimeSkipBtn?.visibility = GONE
+            mPlayerTimeStartBtn?.visibility = VISIBLE
+            mPlayerTimeSkipBtn?.visibility = VISIBLE
             mPlayerTimeResetBtn?.visibility = GONE
-            mCastBtn?.visibility = GONE
+            mCastBtn?.visibility = if (Build.VERSION.SDK_INT >= 30) VISIBLE else GONE
             mZimuBtn?.visibility = GONE
             mAudioTrackBtn?.visibility = GONE
             mVideoTrackBtn?.visibility = GONE
-            mDanmuSettingBtn?.visibility = GONE
-            mDanmuSearchUiBtn?.visibility = GONE
+            mDanmuSettingBtn?.visibility = VISIBLE
+            mDanmuSearchUiBtn?.visibility = VISIBLE
             mScreenDisplay?.visibility = GONE
             return
         }
@@ -1123,34 +1227,18 @@ class VodController(context: Context) : BaseController(context) {
 
     fun updateDanmuBtn() {
         if (mDanmuSettingBtn == null) return
-        mDanmuSettingBtn?.visibility = if (DanmuHelper.isOpen()) VISIBLE else GONE
+        mDanmuSettingBtn?.visibility = VISIBLE
         updatePlayLabelVisibility()
     }
 
     fun updateDanmuSearchUiBtn() {
         if (mDanmuSearchUiBtn == null) return
-        val hasDanmuSearchUi = ApiConfig.get().hasDanmuSearchUi()
-        mDanmuSearchUiBtn?.visibility = if (hasDanmuSearchUi) VISIBLE else GONE
+        mDanmuSearchUiBtn?.visibility = VISIBLE
         updatePlayLabelVisibility()
     }
 
     private fun updatePlayLabelVisibility() {
-        val playBtnGroup = mPlayBtnGroup ?: return
-        var isDanmuMenuVisible = false
-        var isScreenDisplayNext = false
-        for (i in 0 until playBtnGroup.childCount) {
-            val child = playBtnGroup.getChildAt(i)
-            if (child.visibility != VISIBLE) continue
-            if (child == mDanmuSettingBtn) {
-                isDanmuMenuVisible = true
-                continue
-            }
-            if (isDanmuMenuVisible) {
-                isScreenDisplayNext = child == mScreenDisplay
-                break
-            }
-        }
-        mPlayLabel?.visibility = if (isDanmuMenuVisible && !isScreenDisplayNext) GONE else VISIBLE
+        mPlayLabel?.visibility = GONE
     }
 
     interface VodControlListener {

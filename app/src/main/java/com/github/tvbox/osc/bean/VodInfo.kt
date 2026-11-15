@@ -1,6 +1,6 @@
 package com.github.tvbox.osc.bean
 
-import com.github.tvbox.osc.util.RegexUtils.getPattern
+import com.github.tvbox.osc.util.EpisodeOrder
 import java.io.Serializable
 import java.util.ArrayList
 import java.util.Collections
@@ -93,40 +93,31 @@ class VodInfo : Serializable {
             for (flag in flags) {
                 val list = tempSeriesMap[flag.name ?: ""]
                 if (list != null) {
-                    if (flags.size <= 5) {
-                        if (isReverse(list)) Collections.reverse(list)
-                    }
+                    EpisodeOrder.normalize(list)
                     seriesMap!![flag.name ?: ""] = list
                 }
             }
         }
     }
 
-    private fun extractNumber(name: String?): Int {
-        if (name == null) return 0
-        val matcher = getPattern("\\d+").matcher(name)
-        if (matcher.find()) {
-            return matcher.group().toInt()
-        }
-        return 0
-    }
-
-    private fun isReverse(list: List<VodSeries>): Boolean {
-        var ascCount = 0
-        var descCount = 0
-        val limit = Math.min(list.size - 1, 6)
-        for (i in 0 until limit) {
-            val current = extractNumber(list[i].name)
-            val next = extractNumber(list[i + 1].name)
-            if (current < next) {
-                ascCount++
-                if (ascCount == 2) return false
-            } else if (current > next) {
-                descCount++
-                if (descCount == 2) return true
-            }
-        }
-        return false
+    fun restorePlayback(record: VodInfo?) {
+        val reversed = record?.reverseSort ?: false
+        if (reverseSort != reversed) reverse()
+        reverseSort = reversed
+        val map = seriesMap
+        playFlag = record?.playFlag?.takeIf { map?.containsKey(it) == true } ?: map?.keys?.firstOrNull()
+        playerCfg = record?.playerCfg.orEmpty()
+        playNote = record?.playNote.orEmpty()
+        val list = map?.get(playFlag).orEmpty()
+        val exact = if (playNote.isNotBlank()) list.indexOfFirst { it.name == playNote } else -1
+        val savedKey = EpisodeOrder.key(playNote)
+        val matched = if (exact >= 0) exact else if (savedKey != null) {
+            list.indexOfFirst { EpisodeOrder.key(it.name) == savedKey }
+        } else -1
+        // Old records store an index and a display name, not the episode list.
+        // Match the name first so normalizing a source's order does not resume another video.
+        playIndex = (if (matched >= 0) matched else record?.playIndex ?: 0)
+            .coerceIn(0, maxOf(0, list.size - 1))
     }
 
     fun reverse() {

@@ -1,5 +1,8 @@
 package com.github.tvbox.osc.ui.compose
 
+import com.fbox.mobile.MobileIconAction
+import com.github.tvbox.osc.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,37 +46,11 @@ fun BackupDialogContent(
             .padding(bottom = 12.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onBackupNow),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("立即备份", color = Color.White, fontSize = 14.sp)
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onStoragePermission),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("存储权限", color = Color.White, fontSize = 14.sp)
-            }
+            MobileIconAction(R.drawable.ic_action_backup, "立即备份", onBackupNow, caption = "备份")
+            MobileIconAction(R.drawable.ic_action_permission, "存储权限", onStoragePermission, caption = "权限")
         }
         Text(
             text = "点击下方按钮操作",
@@ -111,14 +87,7 @@ fun BackupDialogContent(
                                 .weight(1f)
                                 .clickable { onRestore(item) }
                         )
-                        Text(
-                            text = "删除",
-                            color = Color(0xFFFFB4AB),
-                            fontSize = 13.sp,
-                            modifier = Modifier
-                                .clickable { onDelete(item) }
-                                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
-                        )
+                        MobileIconAction(R.drawable.icon_delete, "删除备份 $item", { onDelete(item) }, tint = Color(0xFFFFB4AB))
                     }
                 }
             }

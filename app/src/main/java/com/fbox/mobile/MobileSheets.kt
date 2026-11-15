@@ -242,6 +242,7 @@ object MobileSheets {
         button.setPadding(dp(context, 14f), dp(context, 6f), dp(context, 14f), dp(context, 6f))
         button.minHeight = dp(context, 48f)
         button.setBackgroundResource(R.drawable.mobile_surface)
+        if (label == "返回") MobileActions.bind(button, R.drawable.mobile_back, label)
         return button
     }
 

@@ -210,6 +210,45 @@ class ApiConfig private constructor() {
         return configUrl
     }
 
+    private val restoreCallbacks = ArrayList<LoadConfigCallback>()
+
+    /** Restore in-memory sources and their spider before opening a page after process death. */
+    fun ensureConfigLoaded(callback: LoadConfigCallback) {
+        if (restoreCallbacks.isNotEmpty()) {
+            restoreCallbacks.add(callback)
+            return
+        }
+        if (sourceBeanList.isNotEmpty() || Hawk.get(HawkConfig.API_URL, "").isEmpty()) {
+            callback.success()
+            return
+        }
+        restoreCallbacks.add(callback)
+        val restored = object : LoadConfigCallback {
+            override fun success() = finishConfigRestore(null)
+            override fun error(msg: String) = finishConfigRestore(msg)
+            override fun notice(msg: String) {
+                for (waiting in restoreCallbacks.toList()) waiting.notice(msg)
+            }
+        }
+        loadConfig(true, object : LoadConfigCallback {
+            override fun success() {
+                val jar = getSpider()
+                if (jar.isNullOrEmpty()) restored.success()
+                else loadJar(true, jar, restored)
+            }
+            override fun error(msg: String) = restored.error(msg)
+            override fun notice(msg: String) = restored.notice(msg)
+        }, null)
+    }
+
+    private fun finishConfigRestore(error: String?) {
+        val callbacks = restoreCallbacks.toList()
+        restoreCallbacks.clear()
+        for (callback in callbacks) {
+            if (error == null) callback.success() else callback.error(error)
+        }
+    }
+
     fun loadConfig(useCache: Boolean, callback: LoadConfigCallback, activity: Activity?) {
         val apiUrl = Hawk.get(HawkConfig.API_URL, "")
         if (apiUrl.isEmpty()) {
@@ -1319,7 +1358,8 @@ class ApiConfig private constructor() {
                 Hawk.put(HawkConfig.EPG_URL, "")
             }
             if (livesOBJ.has("playerType")) {
-                val livePlayType = livesOBJ.get("playerType").asString
+                val livePlayType = livesOBJ.get("playerType").asString.trim().toIntOrNull()
+                    ?: Hawk.get(HawkConfig.PLAY_TYPE, 2)
                 Hawk.put(HawkConfig.LIVE_PLAY_TYPE, livePlayType)
             } else {
                 Hawk.put(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 2))

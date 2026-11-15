@@ -50,6 +50,7 @@ import com.github.tvbox.osc.ui.dialog.QuickSearchDialog
 import com.github.tvbox.osc.ui.fragment.PlayFragment
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FastClickCheckUtil
+import com.github.tvbox.osc.util.EpisodeOrder
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.ImgUtil
 import com.github.tvbox.osc.util.LOG
@@ -74,7 +75,6 @@ import java.util.HashSet
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.regex.Pattern
 
 /**
  * @author pj567
@@ -165,7 +165,8 @@ class DetailActivity : BaseActivity() {
         EventBus.getDefault().register(this)
         initView()
         initViewModel()
-        initData()
+        showLoading()
+        withVodConfig { initData() }
     }
 
     private fun initView() {
@@ -368,6 +369,15 @@ class DetailActivity : BaseActivity() {
                 if (vInfo.playIndex >= 0 && list != null) {
                     vInfo.playIndex = (list.size - 1) - vInfo.playIndex
                 }
+                val preview = previewVodInfo
+                if (preview != null && preview !== vInfo && preview.seriesMap === sMap) {
+                    val playingList = sMap[preview.playFlag]
+                    if (playingList != null && preview.playIndex in playingList.indices) {
+                        preview.playIndex = playingList.lastIndex - preview.playIndex
+                    }
+                    preview.reverseSort = vInfo.reverseSort
+                }
+                insertVod(firstsourceKey, vInfo)
                 firstReverse = !firstReverse
                 setSeriesGroupOptions()
                 seriesAdapter?.notifyDataSetChanged()
@@ -652,6 +662,7 @@ class DetailActivity : BaseActivity() {
         pInfo.playerCfg = vInfo.playerCfg
         pInfo.playFlag = vInfo.playFlag
         pInfo.playIndex = vInfo.playIndex
+        pInfo.reverseSort = vInfo.reverseSort
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -913,26 +924,9 @@ class DetailActivity : BaseActivity() {
                     tvPlay?.visibility = View.VISIBLE
                     mEmptyPlayList?.visibility = View.GONE
 
-                    val vodInfoRecord = RoomDataManger.getVodInfo(sourceKey, vodId)
-                    if (vodInfoRecord != null) {
-                        vInfo.playIndex = Math.max(vodInfoRecord.playIndex, 0)
-                        vInfo.playFlag = vodInfoRecord.playFlag
-                        vInfo.playerCfg = vodInfoRecord.playerCfg
-                        vInfo.reverseSort = vodInfoRecord.reverseSort
-                    } else {
-                        vInfo.playIndex = 0
-                        vInfo.playFlag = null
-                        vInfo.playerCfg = ""
-                        vInfo.reverseSort = false
-                    }
-
-                    if (vInfo.reverseSort) {
-                        vInfo.reverse()
-                    }
-
-                    if (vInfo.playFlag == null || !sMap.containsKey(vInfo.playFlag)) {
-                        vInfo.playFlag = sMap.keys.firstOrNull()
-                    }
+                    vInfo.restorePlayback(RoomDataManger.getVodInfo(sourceKey, vodId))
+                    isReverse = vInfo.reverseSort
+                    tvSeriesSort?.text = if (isReverse) "倒序" else "正序"
 
                     restoreDetailFallbackEpisode()
                     resetDetailFallback()
@@ -1833,25 +1827,15 @@ class DetailActivity : BaseActivity() {
     }
 
     private fun extractEpisodeNumber(name: String?): Int {
-        if (name.isNullOrEmpty()) {
-            return -1
-        }
-        try {
-            var text = name.replace(Regex("\\[.*?\\]|\\(.*?\\)"), "")
-            text = text.replace(Regex("\\b(19|20)\\d{2}\\b"), "")
-            text = text.toLowerCase(Locale.ROOT).replace(Regex("2160p|1080p|720p|480p|4k|h26[45]|x26[45]|mp4"), "")
-            val matcher = Pattern.compile("(?i)(?:ep|第|e|[\\-\\.\\s])\\s?(\\d{1,4})").matcher(text)
-            if (matcher.find()) {
-                val group = matcher.group(1)
-                if (group != null) return group.toInt()
-            }
-            val number = text.replace(Regex("\\D+"), "")
-            if (number.isNotEmpty()) {
-                return number.toInt()
-            }
-        } catch (ignored: Exception) {
-        }
-        return -1
+        EpisodeOrder.key(name)?.let { return it.episode }
+        if (name.isNullOrBlank()) return -1
+        // Keep the existing fallback for filenames containing sizes, years and other metadata.
+        val text = name.replace(Regex("\\[.*?\\]|\\(.*?\\)"), "")
+            .replace(Regex("\\b(19|20)\\d{2}\\b"), "")
+            .lowercase(Locale.ROOT).replace(Regex("2160p|1080p|720p|480p|4k|h26[45]|x26[45]|mp4"), "")
+        val match = Regex("(?i)(?:ep|第|e|[\\-\\.\\s])\\s?(\\d{1,4})").find(text)
+        return match?.groupValues?.get(1)?.toIntOrNull()
+            ?: text.replace(Regex("\\D+"), "").toIntOrNull() ?: -1
     }
 
     private fun insertVod(sourceKey: String, vodInfo: VodInfo) {

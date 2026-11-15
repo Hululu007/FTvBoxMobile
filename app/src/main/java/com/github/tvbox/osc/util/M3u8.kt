@@ -523,7 +523,7 @@ object M3u8 {
         var inAdBreak = false
         var changed = false
 
-        for (raw in line.split("\n", limit = -1)) {
+        for (raw in line.split("\n")) {
             val item = raw.trim()
             if (item.isEmpty()) {
                 if (pending.isEmpty()) sb.append(raw).append("\n")
@@ -765,7 +765,7 @@ object M3u8 {
         var seenMedia = false
         var hasPendingDiscontinuity = false
         var pendingDiscontinuity = ""
-        for (raw in content.replace("\r\n", "\n").split("\n", limit = -1)) {
+        for (raw in content.replace("\r\n", "\n").split("\n")) {
             val item = raw.trim()
             if (isDiscontinuityTag(item)) {
                 if (seenMedia && !hasPendingDiscontinuity) {

@@ -421,10 +421,14 @@ class LivePlayActivity : BaseActivity() {
         val root = findViewById<FrameLayout>(R.id.live_root) ?: return
         val actions = LinearLayout(this)
         actions.orientation = LinearLayout.HORIZONTAL
+        actions.isBaselineAligned = false
+        actions.gravity = Gravity.CENTER_VERTICAL
         val labels = arrayOf("返回", "频道", "节目", "设置")
         for (i in labels.indices) {
             val action = i
             val button = com.fbox.mobile.MobileSheets.action(this, labels[i])
+            val icons = intArrayOf(R.drawable.mobile_back, R.drawable.ic_action_channels, R.drawable.ic_action_program, R.drawable.icon_setting)
+            com.fbox.mobile.MobileActions.bind(button, icons[i], labels[i], caption = labels[i])
             button.setOnClickListener {
                 when (action) {
                     0 -> onBackPressed()
@@ -436,12 +440,19 @@ class LivePlayActivity : BaseActivity() {
                     else -> showSettingGroup()
                 }
             }
-            actions.addView(button)
+            actions.addView(button, LinearLayout.LayoutParams(-2, -2).apply {
+                if (i > 0) marginStart = com.fbox.mobile.MobileSheets.dp(this@LivePlayActivity, 8f)
+            })
         }
-        val params = FrameLayout.LayoutParams(-2, com.fbox.mobile.MobileSheets.dp(this, 48f), Gravity.TOP or Gravity.START)
-        params.leftMargin = com.fbox.mobile.MobileSheets.dp(this, 12f)
+        val scroll = android.widget.HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(actions)
+        }
+        val params = FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.START)
+        params.marginStart = com.fbox.mobile.MobileSheets.dp(this, 12f)
+        params.marginEnd = com.fbox.mobile.MobileSheets.dp(this, 12f)
         params.topMargin = com.fbox.mobile.MobileSheets.dp(this, 8f)
-        root.addView(actions, params)
+        root.addView(scroll, params)
     }
 
     // 获取EPG并存储 // 百川epg DIYP epg 51zmt epg ------- 自建EPG格式输出格式请参考 51zmt

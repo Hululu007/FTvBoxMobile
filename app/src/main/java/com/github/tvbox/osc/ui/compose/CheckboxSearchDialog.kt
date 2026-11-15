@@ -1,5 +1,8 @@
 package com.github.tvbox.osc.ui.compose
 
+import com.fbox.mobile.MobileIconAction
+import com.github.tvbox.osc.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -48,37 +50,11 @@ fun CheckboxSearchDialogContent(
             .padding(bottom = 12.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onCheckAll),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("全选", color = Color.White, fontSize = 15.sp)
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onClearAll),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("全不选", color = Color.White, fontSize = 15.sp)
-            }
+            MobileIconAction(R.drawable.ic_action_select_all, "全选", onCheckAll)
+            MobileIconAction(R.drawable.ic_action_deselect, "全不选", onClearAll)
         }
         Box(
             modifier = Modifier
@@ -88,8 +64,8 @@ fun CheckboxSearchDialogContent(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(sourceList) { source ->
                     val isChecked = checkedSources?.containsKey(source.key) == true

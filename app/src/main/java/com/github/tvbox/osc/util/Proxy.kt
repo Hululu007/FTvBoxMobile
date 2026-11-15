@@ -157,7 +157,7 @@ object Proxy {
         if (m3u8Content == null) return ""
         var content = m3u8Content
         if (content.startsWith("\ufeff")) content = content.substring(1)
-        val m3u8Lines = content.replace("\r\n", "\n").replace('\r', '\n').split("\n".toRegex(), limit = -1)
+        val m3u8Lines = content.replace("\r\n", "\n").replace('\r', '\n').split("\n")
         val processedM3u8 = StringBuilder()
         var nextIsVariant = false
 

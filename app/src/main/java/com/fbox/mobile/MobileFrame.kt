@@ -3,7 +3,10 @@ package com.fbox.mobile
 import android.content.Intent
 import android.view.View
 import android.widget.LinearLayout
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
@@ -59,8 +62,10 @@ class MobileFrame(private val activity: BaseActivity, private val content: View)
                     title = { Text(screenTitle(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     actions = {
                         if (activity is HistoryActivity || activity is CollectActivity) {
-                            TextButton(onClick = { content.findViewById<View>(R.id.tvDelete)?.performClick() }) { Text("管理") }
-                            TextButton(onClick = { content.findViewById<View>(R.id.tvClear)?.performClick() }) { Text("清空") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                MobileIconAction(R.drawable.ic_action_manage, "管理", { content.findViewById<View>(R.id.tvDelete)?.performClick() })
+                                MobileIconAction(R.drawable.icon_delete, "清空", { content.findViewById<View>(R.id.tvClear)?.performClick() })
+                            }
                         }
                     },
                     windowInsets = WindowInsets(0, 0, 0, 0),

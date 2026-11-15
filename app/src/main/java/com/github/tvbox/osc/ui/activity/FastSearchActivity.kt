@@ -422,6 +422,11 @@ class FastSearchActivity : BaseActivity() {
     }
 
     private fun initData() {
+        showLoading()
+        withVodConfig { startInitialSearch() }
+    }
+
+    private fun startInitialSearch() {
         initCheckedSourcesForSearch()
         val intent = intent
         if (intent != null && intent.hasExtra("title")) {

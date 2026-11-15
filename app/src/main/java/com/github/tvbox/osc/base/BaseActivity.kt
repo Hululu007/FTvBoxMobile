@@ -14,6 +14,8 @@ import android.util.DisplayMetrics
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.Toast
+import com.github.tvbox.osc.api.ApiConfig
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.PermissionChecker
 import com.fbox.mobile.MobileFrame
@@ -83,6 +85,7 @@ abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
         phoneFullscreen = this is com.github.tvbox.osc.ui.activity.LivePlayActivity
         val host: ViewGroup = findViewById(android.R.id.content)
         val content = host.getChildAt(0)
+        com.fbox.mobile.MobileActions.installScreen(content)
         host.removeView(content)
         mobileFrame = MobileFrame(this, content)
         setContentView(mobileFrame!!.view)
@@ -207,6 +210,22 @@ abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
     protected abstract fun getLayoutResID(): Int
 
     protected abstract fun init()
+
+    protected fun withVodConfig(onReady: () -> Unit) {
+        ApiConfig.get().ensureConfigLoaded(object : ApiConfig.LoadConfigCallback {
+            override fun success() {
+                if (!isFinishing && !isDestroyed) onReady()
+            }
+
+            override fun error(msg: String) {
+                if (isFinishing || isDestroyed) return
+                showEmpty()
+                Toast.makeText(this@BaseActivity, "配置加载失败：$msg", Toast.LENGTH_LONG).show()
+            }
+
+            override fun notice(msg: String) {}
+        })
+    }
 
     protected fun setLoadSir(view: View) {
         if (mLoadService == null) {

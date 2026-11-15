@@ -1,15 +1,15 @@
 package com.github.tvbox.osc.ui.compose
 
+import com.fbox.mobile.MobileIconAction
+import com.github.tvbox.osc.R
+
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -85,46 +84,11 @@ fun DanmuApiDialogContent(
                 .height(56.dp)
         )
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            horizontalArrangement = Arrangement.End
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
         ) {
-            Row(
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(44.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onDefaultClick),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "默认",
-                    color = Color(0xFFFFFFFF),
-                    fontSize = 14.sp
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .width(80.dp)
-                    .height(44.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1E3860), ShapeRadius)
-                    .border(1.dp, Color(0x5900C2FF), ShapeRadius)
-                    .clickable { onSubmitClick(text.trim()) },
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "确定",
-                    color = Color(0xFFFFFFFF),
-                    fontSize = 14.sp
-                )
-            }
+            MobileIconAction(R.drawable.ic_action_reset, "恢复默认弹幕地址", onDefaultClick, caption = "默认")
+            MobileIconAction(R.drawable.ic_action_save, "保存弹幕地址", { onSubmitClick(text.trim()) }, caption = "保存")
         }
     }
 }

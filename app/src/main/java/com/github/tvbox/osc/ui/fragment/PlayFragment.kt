@@ -351,18 +351,7 @@ open class PlayFragment : BaseLazyFragment() {
                 val dialog = DanmuSettingDialog(requireContext())
                 dialog.setDanmuSearchListener(object : DanmuSettingDialog.DanmuSearchListener {
                     override fun openSearchDanmuDialog() {
-                        val searchDanmuDialog = SearchDanmuDialog(requireContext())
-                        searchDanmuDialog.setDanmuLoader(object : SearchDanmuDialog.DanmuLoader {
-                            override fun loadDanmu(danmu: String) {
-                                if (!isAdded) return
-                                checkDanmu(danmu)
-                            }
-                        })
-                        val info = mVodInfo
-                        val series = if (info == null) null else getCurrentSeries(info.playFlag, info.playIndex)
-                        searchDanmuDialog.setEpisode(series?.name ?: "")
-                        searchDanmuDialog.setSearchWord(info?.name ?: "")
-                        searchDanmuDialog.show()
+                        showSearchDanmuDialog()
                     }
                 })
                 dialog.show()
@@ -373,9 +362,13 @@ open class PlayFragment : BaseLazyFragment() {
             }
 
             override fun searchDanmuUi(longClick: Boolean) {
-                val info = mVodInfo
-                val series = if (info == null) null else getCurrentSeries(info.playFlag, info.playIndex)
-                ApiConfig.get().searchDanmuUi(info?.name ?: "", series?.name ?: "", longClick)
+                if (longClick && ApiConfig.get().hasDanmuSearchUi()) {
+                    val info = mVodInfo
+                    val series = if (info == null) null else getCurrentSeries(info.playFlag, info.playIndex)
+                    ApiConfig.get().searchDanmuUi(info?.name ?: "", series?.name ?: "", true)
+                } else {
+                    showSearchDanmuDialog()
+                }
             }
 
             override fun playNext(rmProgress: Boolean) {
@@ -1549,6 +1542,20 @@ open class PlayFragment : BaseLazyFragment() {
         currentVod?.playIndex = (currentVod?.playIndex ?: 0) - 1
         reusePlayerOnSwitch = true
         play(false)
+    }
+
+    private fun showSearchDanmuDialog() {
+        val dialog = SearchDanmuDialog(requireContext())
+        dialog.setDanmuLoader(object : SearchDanmuDialog.DanmuLoader {
+            override fun loadDanmu(danmu: String) {
+                if (isAdded) checkDanmu(danmu)
+            }
+        })
+        val info = mVodInfo
+        val series = if (info == null) null else getCurrentSeries(info.playFlag, info.playIndex)
+        dialog.setEpisode(series?.name ?: "")
+        dialog.setSearchWord(info?.name ?: "")
+        dialog.show()
     }
 
     private fun showEpisodeDialog() {

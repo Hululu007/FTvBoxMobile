@@ -1,5 +1,8 @@
 package com.github.tvbox.osc.ui.compose
 
+import com.fbox.mobile.MobileIconAction
+import com.github.tvbox.osc.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -125,34 +127,10 @@ fun CastDialogContent(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onRefresh),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("刷新", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(ShapeRadius)
-                    .background(Color(0xFF1A2232), ShapeRadius)
-                    .border(1.dp, Color(0x22FFFFFF), ShapeRadius)
-                    .clickable(onClick = onCancel),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("取消", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
+            MobileIconAction(R.drawable.ic_action_refresh, "刷新投屏设备", onRefresh)
+            MobileIconAction(R.drawable.ic_sheet_close, "取消投屏", onCancel)
         }
     }
 }

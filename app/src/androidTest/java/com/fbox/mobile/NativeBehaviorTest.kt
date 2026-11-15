@@ -10,12 +10,13 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
-import android.text.TextUtils
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.EditText
 import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.FileProvider
 import androidx.core.widget.NestedScrollView
@@ -62,6 +63,7 @@ import com.chad.library.adapter.base.BaseViewHolder
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.Movie
+import com.github.tvbox.osc.bean.LivePlayerManager
 import com.github.tvbox.osc.bean.MovieSort
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.cache.RoomDataManger
@@ -69,6 +71,7 @@ import com.github.tvbox.osc.ui.activity.CollectActivity
 import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.activity.FastSearchActivity
 import com.github.tvbox.osc.ui.activity.HomeActivity
+import com.github.tvbox.osc.ui.activity.HistoryActivity
 import com.github.tvbox.osc.ui.activity.LivePlayActivity
 import com.github.tvbox.osc.ui.activity.LocalFileActivity
 import com.github.tvbox.osc.ui.activity.PushActivity
@@ -81,6 +84,8 @@ import com.github.tvbox.osc.ui.dialog.GridFilterDialog
 import com.github.tvbox.osc.ui.fragment.UserFragment
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper
+import com.github.tvbox.osc.util.M3u8
+import com.github.tvbox.osc.util.Proxy
 import com.github.tvbox.osc.viewmodel.SourceViewModel
 import com.orhanobut.hawk.Hawk
 import fi.iki.elonen.NanoHTTPD
@@ -187,6 +192,319 @@ class NativeBehaviorTest {
                 Hawk.delete(key)
             } else {
                 Hawk.put(key, value)
+            }
+        }
+    }
+
+    @Test
+    fun hlsCleanupAndProxyKeepPlayableSegments() {
+        val base = server!!.base()
+        val playlist = buildString {
+            append("#EXTM3U\n#EXT-X-TARGETDURATION:10\n")
+            for (i in 1..20) {
+                if (i == 11) {
+                    append("#EXT-X-CUE-OUT:8\n#EXTINF:8,\nads/preroll.ts\n#EXT-X-CUE-IN\n")
+                }
+                append("#EXTINF:10,\nsegment").append(i.toString().padStart(4, '0')).append(".ts\n")
+            }
+            append("#EXT-X-ENDLIST\n")
+        }
+        for (content in listOf(playlist, playlist.trimEnd(), playlist.replace("\n", "\r\n"))) {
+            val cleaned = M3u8.purify("$base/hls.m3u8", content)!!
+            assertFalse(cleaned.contains("preroll.ts"))
+            assertTrue(cleaned.contains("$base/segment0001.ts"))
+            assertTrue(cleaned.contains("$base/segment0020.ts"))
+            assertTrue(cleaned.contains("#EXT-X-ENDLIST"))
+        }
+        val response = Proxy.itv(mapOf("url" to "$base/hls.m3u8", "type" to "m3u8"))
+        assertNotNull("The HLS proxy returned no playlist", response)
+        assertEquals(200, response!![0])
+        val rewritten = (response[2] as java.io.InputStream).bufferedReader().use { it.readText() }
+        assertTrue(rewritten.contains("#EXT-X-ENDLIST"))
+        assertFalse(rewritten.lineSequence().any { it == "segment0001.ts" })
+        assertTrue(rewritten.contains("type=media"))
+    }
+
+    @Test
+    fun livePlayerAcceptsLegacyStringPreferences() {
+        Hawk.put(HawkConfig.PLAY_TYPE, 2)
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            for (stored in listOf("2", 2, "invalid")) {
+                Hawk.put(HawkConfig.LIVE_PLAY_TYPE, stored)
+                val video = VideoView<xyz.doikki.videoplayer.player.AbstractPlayer>(context)
+                try {
+                    val manager = LivePlayerManager()
+                    manager.init(video)
+                    assertEquals(2, manager.getLivePlayerType())
+                    assertEquals(2, Hawk.get<Any>(HawkConfig.LIVE_PLAY_TYPE))
+                } finally {
+                    video.release()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun detailAndSearchRestoreSourcesBeforeLoadingAfterProcessDeath() {
+        val s = server!!
+        val clear = ApiConfig::class.java.getDeclaredMethod("resetConfigData").apply { isAccessible = true }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
+        val detailIntent = Intent(context, DetailActivity::class.java)
+            .putExtra("id", s.itemId()).putExtra("sourceKey", "phone-fixture")
+            .putExtra("title", "手机播放测试")
+        try {
+            ActivityScenario.launch<DetailActivity>(detailIntent).use { detail ->
+                await(BooleanSupplier {
+                    val ready = booleanArrayOf(false)
+                    detail.onActivity { activity ->
+                        ready[0] = activity.findViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
+                    }
+                    ready[0]
+                })
+                assertNotNull(ApiConfig.get().getSource("phone-fixture"))
+            }
+            InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
+            val searchIntent = Intent(context, FastSearchActivity::class.java).putExtra("title", "手机播放测试")
+            ActivityScenario.launch<FastSearchActivity>(searchIntent).use { search ->
+                await(BooleanSupplier {
+                    val ready = booleanArrayOf(false)
+                    search.onActivity { activity ->
+                        val grid = activity.findViewById<RecyclerView>(R.id.mGridView)
+                        ready[0] = grid?.adapter?.itemCount?.let { it > 0 } == true
+                    }
+                    ready[0]
+                })
+            }
+        } finally {
+            RoomDataManger.getVodInfo("phone-fixture", s.itemId())?.let {
+                RoomDataManger.deleteVodRecord("phone-fixture", it)
+            }
+        }
+    }
+
+    @Test
+    fun historyRestoresSourcesAndResumesTheRecordedEpisode() {
+        val s = server!!
+        s.episodeCount = 3
+        val record = VodInfo().apply {
+            id = s.itemId()
+            sourceKey = "phone-fixture"
+            name = "恢复历史测试"
+            playFlag = "direct"
+            playIndex = 1
+            playNote = "第2集"
+        }
+        RoomDataManger.insertVodRecord("phone-fixture", record)
+        val clear = ApiConfig::class.java.getDeclaredMethod("resetConfigData").apply { isAccessible = true }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
+        val resumed = AtomicReference<DetailActivity>()
+        try {
+            ActivityScenario.launch(HistoryActivity::class.java).use {
+                onView(withText("恢复历史测试")).perform(click())
+                await(BooleanSupplier {
+                    val ready = booleanArrayOf(false)
+                    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                        for (activity in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                            if (activity is DetailActivity) {
+                                resumed.set(activity)
+                                ready[0] = activity.findViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
+                            }
+                        }
+                    }
+                    ready[0]
+                })
+                InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                    val info = RoomDataManger.getVodInfo("phone-fixture", s.itemId())!!
+                    assertEquals("direct", info.playFlag)
+                    assertEquals(1, info.playIndex)
+                    val title = resumed.get().findViewById<TextView>(R.id.tv_info_name1).text.toString()
+                    assertTrue("The player resumed the wrong episode: $title", title.contains("第2集"))
+                }
+            }
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync { resumed.get()?.finish() }
+            RoomDataManger.deleteVodRecord("phone-fixture", record)
+        }
+    }
+
+    @Test
+    fun mixedEpisodeNamesSortAndResumeTheRecordedVideo() {
+        val s = server!!
+        val expected = (1..45).map { if (it in 10..19) "普通话版($it)" else "$it(普通话版)" }
+        s.episodeNames = (10..19).map { "普通话版($it)" } + (1..45).map { "$it(普通话版)" }
+        val record = VodInfo().apply {
+            id = s.itemId()
+            sourceKey = "phone-fixture"
+            name = "混合集名续播测试"
+            playFlag = "direct"
+            playIndex = 19
+            playNote = "10(普通话版)" // This alias will be removed in favor of 普通话版(10).
+        }
+        val preview = Hawk.get(HawkConfig.SHOW_PREVIEW, true)
+        Hawk.put(HawkConfig.SHOW_PREVIEW, true)
+        RoomDataManger.insertVodRecord("phone-fixture", record)
+        try {
+            val intent = Intent(context, DetailActivity::class.java)
+                .putExtra("id", s.itemId()).putExtra("sourceKey", "phone-fixture")
+                .putExtra("title", "混合集名续播测试")
+            ActivityScenario.launch<DetailActivity>(intent).use { detail ->
+                await(BooleanSupplier {
+                    val prepared = booleanArrayOf(false)
+                    detail.onActivity { activity ->
+                        val player = activity.findViewById<VideoView<*>>(R.id.mVideoView)
+                        prepared[0] = player?.getDuration()?.let { it > 0 } == true
+                        if (prepared[0]) player.pause()
+                    }
+                    prepared[0]
+                })
+                detail.onActivity { activity ->
+                    val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                    val adapter = list.adapter as BaseQuickAdapter<*, *>
+                    assertEquals(expected, adapter.data.map { (it as VodInfo.VodSeries).name })
+                    val saved = RoomDataManger.getVodInfo("phone-fixture", s.itemId())!!
+                    assertEquals(9, saved.playIndex)
+                    assertEquals("普通话版(10)", saved.playNote)
+                    val title = activity.findViewById<TextView>(R.id.tv_info_name1).text.toString()
+                    assertTrue("History resumed a different video: $title", title.contains("普通话版(10)"))
+                }
+                onView(withId(R.id.mSeriesSortTv)).perform(scrollTo())
+                screenshot("mixed-episode-order")
+                detail.onActivity { activity ->
+                    activity.findViewById<View>(R.id.mSeriesSortTv).performClick()
+                    val adapter = activity.findViewById<RecyclerView>(R.id.mGridView).adapter as BaseQuickAdapter<*, *>
+                    assertEquals(expected.reversed(), adapter.data.map { (it as VodInfo.VodSeries).name })
+                    assertEquals("普通话版(10)", (adapter.data[35] as VodInfo.VodSeries).name)
+                    assertTrue("Reversing the list must keep episode 10 selected; selected=" +
+                        adapter.data.filter { (it as VodInfo.VodSeries).selected }.map { (it as VodInfo.VodSeries).name },
+                        (adapter.data[35] as VodInfo.VodSeries).selected)
+                    val playing = com.github.tvbox.osc.base.App.getInstance().vodInfo!!
+                    assertEquals("Preview must keep the same video after reversing", "普通话版(10)",
+                        playing.seriesMap!![playing.playFlag]!![playing.playIndex].name)
+                    val saved = RoomDataManger.getVodInfo("phone-fixture", s.itemId())!!
+                    assertTrue(saved.reverseSort)
+                    assertEquals(35, saved.playIndex)
+                    assertEquals("普通话版(10)", saved.playNote)
+                }
+            }
+        } finally {
+            RoomDataManger.deleteVodRecord("phone-fixture", record)
+            Hawk.put(HawkConfig.SHOW_PREVIEW, preview)
+        }
+    }
+
+    @Test
+    fun skipTimesUseCurrentAndRemainingPlaybackWithOneTap() {
+        val config = JSONObject("""{"pl":2,"sc":0,"sp":1,"st":0,"et":0,"ijk":""}""")
+        val position = longArrayOf(42_000)
+        val duration = longArrayOf(100_000)
+        val controller = AtomicReference<com.github.tvbox.osc.player.controller.VodController>()
+        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val player = object : xyz.doikki.videoplayer.controller.MediaPlayerControl by
+                    VideoView<xyz.doikki.videoplayer.player.AbstractPlayer>(activity) {
+                    override fun getCurrentPosition() = position[0]
+                    override fun getDuration() = duration[0]
+                }
+                controller.set(com.github.tvbox.osc.player.controller.VodController(activity).apply {
+                    setMediaPlayer(player)
+                    setPlayerConfig(config)
+                    findViewById<View>(R.id.play_time_start).performClick()
+                })
+            }
+            onView(withContentDescription("使用当前进度 · 00:42")).inRoot(isDialog())
+                .check(matches(isDisplayed()))
+            screenshot("skip-intro-current")
+            scenario.onActivity { position[0] = 47_000 }
+            onView(withContentDescription("使用当前进度 · 00:42")).inRoot(isDialog()).perform(click())
+            scenario.onActivity {
+                assertEquals("Save the time displayed when the dialog opened", 42, config.getInt("st"))
+                assertTrue(controller.get().findViewById<View>(R.id.play_time_start).contentDescription.toString().contains("00:42"))
+                controller.get().findViewById<View>(R.id.play_time_start).performLongClick()
+                position[0] = 80_000
+                controller.get().findViewById<View>(R.id.play_time_end).performClick()
+            }
+            onView(withContentDescription("使用剩余时间 · 00:20")).inRoot(isDialog())
+                .check(matches(isDisplayed()))
+            screenshot("skip-outro-remaining")
+            onView(withContentDescription("使用剩余时间 · 00:20")).inRoot(isDialog()).perform(click())
+            scenario.onActivity {
+                assertEquals(20, config.getInt("et"))
+                position[0] = 90_000
+                controller.get().findViewById<View>(R.id.play_time_start).performClick()
+            }
+            SystemClock.sleep(500) // The bottom sheet's window animation is not tracked by Espresso.
+            onView(withContentDescription("使用当前进度 · 01:30")).inRoot(isDialog()).perform(click())
+            scenario.onActivity { assertEquals("Do not allow intro and outro to cover the entire video", 0, config.getInt("st")) }
+            onView(withText("片头和片尾总时长必须小于视频时长")).inRoot(isDialog())
+                .check(matches(isDisplayed()))
+            screenshot("skip-invalid-combined")
+            onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
+            scenario.onActivity {
+                duration[0] = 0
+                controller.get().findViewById<View>(R.id.play_time_end).performClick()
+            }
+            SystemClock.sleep(500)
+            onView(withContentDescription("使用剩余时间 · 暂不可用")).inRoot(isDialog())
+                .check(matches(not(androidx.test.espresso.matcher.ViewMatchers.isEnabled())))
+            onView(withContentDescription("片尾时长（秒）")).inRoot(isDialog()).perform(replaceText("5"))
+            onView(withContentDescription("保存片尾时长")).inRoot(isDialog()).perform(click())
+            scenario.onActivity { assertEquals("Manual entry remains available for unknown duration", 5, config.getInt("et")) }
+        }
+    }
+
+    @Test
+    fun playbackMenuKeepsButtonsAlignedWithoutClipping() {
+        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val root = LayoutInflater.from(activity).inflate(R.layout.player_vod_control_view, null)
+                var previousClicks = 0
+                root.findViewById<View>(R.id.play_pre).setOnClickListener { previousClicks++ }
+                MobilePlayerControls.install(root)
+                root.findViewById<View>(R.id.bottom_container).visibility = View.VISIBLE
+                val group = root.findViewById<LinearLayout>(R.id.play_btn_group)
+                assertEquals(10, group.childCount)
+                for (widthDp in listOf(360f, 960f)) {
+                    root.measure(
+                        View.MeasureSpec.makeMeasureSpec(MobileSheets.dp(activity, widthDp), View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(MobileSheets.dp(activity, 300f), View.MeasureSpec.EXACTLY)
+                    )
+                    root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+                    val first = group.getChildAt(0)
+                    for (i in 0 until group.childCount) {
+                        val button = group.getChildAt(i) as TextView
+                        val label = "${button.contentDescription} at ${widthDp}dp"
+                        assertEquals("$label top", first.top, button.top)
+                        assertEquals("$label bottom", first.bottom, button.bottom)
+                        assertTrue("$label is clipped", button.top >= 0 && button.bottom <= group.height)
+                        assertEquals("$label compact width", MobileSheets.dp(activity, 48f), button.width)
+                        assertTrue("$label touch height", button.height >= MobileSheets.dp(activity, 48f))
+                        assertNotNull("$label icon", button.compoundDrawablesRelative[1])
+                        assertTrue("$label accessible name", !button.contentDescription.isNullOrBlank())
+                        val caption = button.transformationMethod.getTransformation(button.text, button).toString()
+                        assertTrue("$label visible caption", caption.isNotBlank())
+                        assertTrue("$label caption is clipped", button.paint.measureText(caption) <= button.width - button.paddingLeft - button.paddingRight)
+                        val textLayout = button.layout!!
+                        val captionTop = button.baseline - textLayout.getLineBaseline(0)
+                        val iconBottom = button.paddingTop + button.compoundDrawablesRelative[1]!!.bounds.height()
+                        assertTrue("$label icon and text must stay close",
+                            kotlin.math.abs(captionTop - iconBottom - MobileSheets.dp(activity, 2f)) <= 1)
+                        val contentCenter = (button.paddingTop + captionTop + textLayout.height) / 2f
+                        assertTrue("$label icon and text must be centered together",
+                            kotlin.math.abs(contentCenter - button.height / 2f) <= MobileSheets.dp(activity, 1f))
+                    }
+                }
+                root.findViewById<View>(R.id.play_pre).performClick()
+                assertEquals(1, previousClicks)
+                val speed = root.findViewById<TextView>(R.id.play_speed)
+                speed.text = "1.5x"
+                assertTrue(speed.contentDescription.toString().contains("1.5x"))
+                assertEquals("1.5x", speed.text.toString())
+                assertEquals("1.5×", speed.transformationMethod.getTransformation(speed.text, speed).toString())
+                val icons = (0 until group.childCount).map { group.getChildAt(it).getTag(R.id.mobile_action_icon_bound) }
+                assertEquals("Different player actions must have distinct icons", icons.size, icons.toSet().size)
+                for (id in listOf(R.id.danmu_setting, R.id.play_cast, R.id.danmu_search_ui, R.id.play_time_start, R.id.play_time_end)) {
+                    assertTrue("Shortcut missing: $id", root.findViewById<View>(id).parent === group)
+                }
             }
         }
     }
@@ -514,6 +832,7 @@ class NativeBehaviorTest {
                 val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("config", s.base() + "/config2"))
             }
+            SystemClock.sleep(500) // Window animations are not part of Espresso idling.
             onView(withId(R.id.mobilePasteApi)).inRoot(isDialog()).perform(click())
             onView(withId(R.id.input)).inRoot(isDialog()).check(matches(withText(s.base() + "/config2")))
             settings.onActivity { activity ->
@@ -713,18 +1032,37 @@ class NativeBehaviorTest {
             screenshot("playback")
             onView(withId(R.id.mVideoView)).perform(click())
             screenshot("player-controls")
-            onView(withText("更多")).perform(click())
+            onView(withId(R.id.play_more)).perform(click())
             screenshot("player-more")
-            onView(withText("字幕")).inRoot(isDialog()).perform(scrollTo(), click())
+            onView(withContentDescription("字幕设置")).inRoot(isDialog()).perform(scrollTo(), click())
             onView(withId(R.id.subtitleSizePlus)).inRoot(isDialog()).check(matches(isDisplayed()))
             screenshot("player-subtitle")
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
             onView(withId(R.id.mVideoView)).perform(click())
             SystemClock.sleep(500)
-            onView(withText("选集")).perform(click())
+            onView(withId(R.id.play_episode)).perform(click())
             onView(withText("第1集")).inRoot(isDialog()).check(matches(isDisplayed()))
             screenshot("player-episodes")
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
+
+            detail.onActivity { it.findViewById<View>(R.id.danmu_setting).performClick() }
+            onView(withId(R.id.danmuSearch)).inRoot(isDialog()).check(matches(isDisplayed()))
+            onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
+            detail.onActivity { it.findViewById<View>(R.id.danmu_search_ui).performClick() }
+            onView(withId(R.id.input)).inRoot(isDialog()).check(matches(withText("手机播放测试")))
+            onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
+            detail.onActivity { it.findViewById<View>(R.id.play_cast).performClick() }
+            onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).check(matches(isDisplayed())).perform(click())
+            for ((id, title) in listOf(R.id.play_time_start to "片头", R.id.play_time_end to "片尾")) {
+                detail.onActivity { it.findViewById<View>(id).performClick() }
+                SystemClock.sleep(500)
+                onView(withContentDescription("${title}时长（秒）")).inRoot(isDialog()).perform(replaceText("1"))
+                onView(withContentDescription("保存${title}时长")).inRoot(isDialog()).perform(click())
+                detail.onActivity {
+                    assertTrue(it.findViewById<View>(id).contentDescription.toString().contains("00:01"))
+                    it.findViewById<View>(id).performLongClick()
+                }
+            }
             detail.onActivity { activity -> activity.onBackPressed() }
             await(BooleanSupplier {
                 val portrait = booleanArrayOf(false)
@@ -962,7 +1300,10 @@ class NativeBehaviorTest {
         try {
             ActivityScenario.launch(CollectActivity::class.java).use { collect ->
                 collect.onActivity { activity -> activity.findViewById<View>(R.id.tvClear).performClick() }
+                SystemClock.sleep(500) // Wait for the entrance animation before tapping the moving action.
                 onView(withText("取消")).inRoot(isDialog()).perform(click())
+                SystemClock.sleep(500)
+                onView(withContentDescription("关闭弹窗")).check(doesNotExist())
                 assertTrue(RoomDataManger.isVodCollect(vod.sourceKey, vod.id))
                 collect.onActivity { activity -> activity.findViewById<View>(R.id.tvClear).performClick() }
                 screenshot("confirm-clear")
@@ -973,11 +1314,12 @@ class NativeBehaviorTest {
                         { view ->
                             val location = IntArray(2)
                             view.getLocationOnScreen(location)
-                            floatArrayOf(location[0] + view.width / 2f, (location[1] + MobileSheets.dp(context, 100f)).toFloat())
+                            floatArrayOf(location[0] + view.width / 2f, (location[1] + MobileSheets.dp(view.context, 100f)).toFloat())
                         },
                         Press.FINGER
                     )
                 )
+                SystemClock.sleep(500) // Wait for the sheet dismissal animation to remove its window.
                 onView(withContentDescription("关闭弹窗")).check(doesNotExist())
                 assertTrue(RoomDataManger.isVodCollect(vod.sourceKey, vod.id))
             }
@@ -1126,6 +1468,8 @@ class NativeBehaviorTest {
                 dialog.show()
                 shown.set(dialog)
             }
+            // Espresso does not wait for the window animation before calculating tap coordinates.
+            SystemClock.sleep(500)
             onView(withText("地区选项1")).inRoot(isDialog()).check(matches(isSelected())).perform(click())
             assertFalse(category.filterSelect.containsKey("area"))
             settings.onActivity {
@@ -1235,10 +1579,12 @@ class NativeBehaviorTest {
         @Volatile
         var episodeCount: Int = 1
 
+        @Volatile
+        var episodeNames: List<String>? = null
+
         private fun episodes(url: String): String {
-            val values = ArrayList<String>()
-            for (i in 1..episodeCount) values.add("第" + i + "集$" + url)
-            return TextUtils.join("#", values)
+            val names = episodeNames ?: (1..episodeCount).map { "第" + it + "集" }
+            return names.joinToString("#") { it + "$" + url }
         }
 
         fun base(): String {
@@ -1256,7 +1602,11 @@ class NativeBehaviorTest {
                 "/config", "/config2" -> newFixedLengthResponse(
                     Response.Status.OK,
                     "application/json",
-                    "{\"sites\":[{\"key\":\"phone-fixture\",\"name\":\"手机测试源\",\"type\":1,\"api\":\"" + b + (if (session.uri == "/config2") "/second" else "/api") + "\"},{\"key\":\"phone-second\",\"name\":\"第二测试源\",\"type\":1,\"api\":\"" + b + "/second\"}],\"lives\":[{\"name\":\"手机直播\",\"type\":0,\"url\":\"" + b + "/live.txt\"}]}"
+                    "{\"sites\":[{\"key\":\"phone-fixture\",\"name\":\"手机测试源\",\"type\":1,\"api\":\"" + b + (if (session.uri == "/config2") "/second" else "/api") + "\"},{\"key\":\"phone-second\",\"name\":\"第二测试源\",\"type\":1,\"api\":\"" + b + "/second\"}],\"lives\":[{\"name\":\"手机直播\",\"type\":0,\"playerType\":\"2\",\"url\":\"" + b + "/live.txt\"}]}"
+                )
+                "/hls.m3u8" -> newFixedLengthResponse(
+                    Response.Status.OK, "application/vnd.apple.mpegurl",
+                    "#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXTINF:10,\nsegment0001.ts\n#EXT-X-ENDLIST\n"
                 )
                 "/live.txt" -> newFixedLengthResponse(
                     Response.Status.OK,

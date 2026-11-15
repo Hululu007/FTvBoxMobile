@@ -1,0 +1,6 @@
+<resources>
+    <string name="mobile_action_back">返回</string>
+    <item name="mobile_action_icon_bound" type="id" />
+    <item name="play_episode" type="id" />
+    <item name="play_more" type="id" />
+</resources>

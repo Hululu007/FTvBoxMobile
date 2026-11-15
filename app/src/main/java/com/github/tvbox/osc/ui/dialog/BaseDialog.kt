@@ -102,6 +102,7 @@ open class BaseDialog : ComponentDialog {
         hideSysBar()
         window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         if (!phoneSheetInstalled) {
+            com.fbox.mobile.MobileActions.installDialog(findViewById(android.R.id.content)!!, sheetLayout)
             MobileSheets.install(this)
             phoneSheetInstalled = true
         }

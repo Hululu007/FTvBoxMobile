@@ -1,8 +1,10 @@
 package com.github.tvbox.osc.ui.compose
 
+import com.fbox.mobile.MobileIconAction
+import com.github.tvbox.osc.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -89,15 +89,7 @@ fun ApiHistoryDialogContent(
                             modifier = Modifier
                                 .weight(1f)
                         )
-                        Text(
-                            text = "删除",
-                            color = Color(0xFFFFB4AB),
-                            fontSize = 13.sp,
-                            modifier = Modifier
-                                .semantics { contentDescription = "删除配置 $item" }
-                                .clickable { onDeleteClick(item, index) }
-                                .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
-                        )
+                        MobileIconAction(R.drawable.icon_delete, "删除配置 $item", { onDeleteClick(item, index) }, tint = Color(0xFFFFB4AB))
                     }
                 }
             }
