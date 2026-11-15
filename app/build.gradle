@@ -31,6 +31,7 @@ android {
     }
     sourceSets.main.java.srcDirs += 'src/normal/java'
     buildFeatures { compose true; buildConfig true }
+    testOptions { animationsDisabled = true }
     signingConfigs {
         if (releaseSigningFile.exists()) {
             release {

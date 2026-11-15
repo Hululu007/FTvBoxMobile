@@ -238,21 +238,6 @@
     <item name="downXWalk" type="id" />
     <item name="downXWalkArch" type="id" />
 
-    <!-- Fake layout references so R.layout exists for code compiling -->
-    <item name="activity_collect" type="layout" />
-    <item name="activity_detail" type="layout" />
-    <item name="activity_fast_search" type="layout" />
-    <item name="activity_history" type="layout" />
-    <item name="activity_home" type="layout" />
-    <item name="activity_live_play" type="layout" />
-    <item name="activity_local_file" type="layout" />
-    <item name="activity_push" type="layout" />
-    <item name="activity_search" type="layout" />
-    <item name="activity_setting" type="layout" />
-    <item name="fragment_grid" type="layout" />
-    <item name="fragment_model" type="layout" />
-    <item name="fragment_user" type="layout" />
-    <item name="activity_play" type="layout" />
     <item name="mobileHomeActionsClip" type="id" />
     <item name="tvFilter" type="id" />
     <item name="tvFilterColor" type="id" />

@@ -222,43 +222,10 @@ class DetailActivity : BaseActivity() {
         mGridViewQuality = findViewById(R.id.mGridViewQuality)
         mGridViewQuality?.setHasFixedSize(true)
         mGridViewQuality?.layoutManager = V7LinearLayoutManager(this.mContext, 0, false)
-        val qAdapter = object : BaseQuickAdapter<String, BaseViewHolder>(0, qualityOptions) {
-            override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
-                val composeView = androidx.compose.ui.platform.ComposeView(parent.context).apply {
-                    setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                }
-                return BaseViewHolder(composeView)
-            }
-
+        val qAdapter = object : BaseQuickAdapter<String, BaseViewHolder>(R.layout.item_series_flag, qualityOptions) {
             override fun convert(helper: BaseViewHolder, item: String) {
-                val isSelected = helper.layoutPosition == qualityPosition
-                val composeView = helper.itemView as androidx.compose.ui.platform.ComposeView
-                composeView.setContent {
-                    androidx.compose.material3.MaterialTheme(
-                        colorScheme = androidx.compose.material3.darkColorScheme(
-                            primary = androidx.compose.ui.graphics.Color(0xFFAEC6FF),
-                            background = androidx.compose.ui.graphics.Color(0xFF10131A),
-                            surface = androidx.compose.ui.graphics.Color(0xFF171C26),
-                        )
-                    ) {
-                        com.github.tvbox.osc.ui.compose.SeriesFlagItem(
-                            name = item,
-                            isSelected = isSelected,
-                            onClick = {
-                                val position = helper.adapterPosition
-                                val pf = playFragment ?: return@SeriesFlagItem
-                                if (position == qualityPosition) {
-                                    if (showPreview && !fullWindows && pf.player?.isPlaying() == true) enterFullPreview()
-                                    return@SeriesFlagItem
-                                }
-                                if (pf.selectQuality(position)) {
-                                    qualityPosition = position
-                                    qualityAdapter?.notifyDataSetChanged()
-                                }
-                            }
-                        )
-                    }
-                }
+                helper.setText(R.id.tvSeriesFlag, item)
+                helper.getView<View>(R.id.tvSeriesFlagSelect).visibility = if (helper.layoutPosition == qualityPosition) View.VISIBLE else View.GONE
                 helper.itemView.nextFocusUpId = if (tvSeriesGroup?.visibility == View.VISIBLE) R.id.mSeriesSortTv else R.id.mGridViewFlag
                 helper.itemView.nextFocusDownId = R.id.mGridView
             }
@@ -294,44 +261,11 @@ class DetailActivity : BaseActivity() {
         tvSeriesGroup = findViewById(R.id.mSeriesGroupTv)
         mSeriesGroupView?.setHasFixedSize(true)
         mSeriesGroupView?.layoutManager = V7LinearLayoutManager(this.mContext, 0, false)
-        val sgAdapter = object : BaseQuickAdapter<String, BaseViewHolder>(0, seriesGroupOptions) {
-            override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
-                val composeView = androidx.compose.ui.platform.ComposeView(parent.context).apply {
-                    setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-                }
-                return BaseViewHolder(composeView)
-            }
-
+        val sgAdapter = object : BaseQuickAdapter<String, BaseViewHolder>(R.layout.item_series_flag, seriesGroupOptions) {
             override fun convert(helper: BaseViewHolder, item: String) {
-                val isSelected = helper.layoutPosition == selectedSeriesGroupPosition
-                val composeView = helper.itemView as androidx.compose.ui.platform.ComposeView
-                composeView.setContent {
-                    androidx.compose.material3.MaterialTheme(
-                        colorScheme = androidx.compose.material3.darkColorScheme(
-                            primary = androidx.compose.ui.graphics.Color(0xFFAEC6FF),
-                            background = androidx.compose.ui.graphics.Color(0xFF10131A),
-                            surface = androidx.compose.ui.graphics.Color(0xFF171C26),
-                        )
-                    ) {
-                        com.github.tvbox.osc.ui.compose.SeriesFlagItem(
-                            name = item,
-                            isSelected = isSelected,
-                            onClick = {
-                                val position = helper.adapterPosition
-                                if (position in 0 until data.size) {
-                                    selectedSeriesGroupPosition = position
-                                    seriesGroupAdapter?.notifyDataSetChanged()
-                                    val vInfo = vodInfo
-                                    val sMap = vInfo?.seriesMap
-                                    if (vInfo != null && sMap != null && (sMap[vInfo.playFlag]?.size ?: 0) > 0) {
-                                        val targetPos = position * GroupCount
-                                        customSeriesScrollPos(targetPos)
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
+                val tvSeries = helper.getView<TextView>(R.id.tvSeriesFlag)
+                tvSeries.text = item
+                helper.getView<View>(R.id.tvSeriesFlagSelect).visibility = if (helper.layoutPosition == selectedSeriesGroupPosition) View.VISIBLE else View.GONE
                 helper.itemView.nextFocusUpId = R.id.mGridViewFlag
                 if (helper.layoutPosition == data.size - 1) {
                     helper.itemView.id = View.generateViewId()
@@ -439,6 +373,11 @@ class DetailActivity : BaseActivity() {
                 seriesAdapter?.notifyDataSetChanged()
 
                 if (vInfo.playIndex >= 0) customSeriesScrollPos(vInfo.playIndex)
+                val groupView = currentSeriesGroupView
+                if (groupView != null) {
+                    val txtView = groupView.findViewById<TextView>(R.id.tvSeriesFlag)
+                    txtView?.setTextColor(Color.WHITE)
+                }
             }
         }
 
@@ -492,14 +431,16 @@ class DetailActivity : BaseActivity() {
                             val flag = sFlags[i]
                             if (flag.name == oldFlag) {
                                 flag.selected = false
+                                val oldItemView = mGridViewFlag?.layoutManager?.findViewByPosition(i)
+                                oldItemView?.findViewById<View>(R.id.tvSeriesFlagSelect)?.visibility = View.GONE
                                 break
                             }
                         }
                         val flag = sFlags.getOrNull(position)
                         if (flag != null) {
                             flag.selected = true
+                            itemView.findViewById<View>(R.id.tvSeriesFlagSelect)?.visibility = View.VISIBLE
                         }
-                        seriesFlagAdapter?.notifyDataSetChanged()
                     }
                     if (oldSeriesList != null && oldIndex >= 0 && oldSeriesList.size > oldIndex) {
                         oldSeriesList[oldIndex].selected = false
@@ -582,6 +523,8 @@ class DetailActivity : BaseActivity() {
 
         mSeriesGroupView?.setOnItemListener(object : TvRecyclerView.OnItemListener {
             override fun onItemPreSelected(parent: TvRecyclerView, itemView: View?, position: Int) {
+                val txtView = itemView?.findViewById<TextView>(R.id.tvSeriesFlag)
+                txtView?.setTextColor(Color.WHITE)
             }
 
             override fun onItemSelected(parent: TvRecyclerView, itemView: View?, position: Int) {
@@ -623,6 +566,11 @@ class DetailActivity : BaseActivity() {
                 val targetPos = position * GroupCount + 1
                 customSeriesScrollPos(targetPos)
             }
+            val groupView = currentSeriesGroupView
+            if (groupView != null) {
+                val txtView = groupView.findViewById<TextView>(R.id.tvSeriesFlag)
+                txtView?.setTextColor(Color.WHITE)
+            }
             currentSeriesGroupView = view
         }
 
@@ -639,10 +587,10 @@ class DetailActivity : BaseActivity() {
 
     private fun selectSeriesGroup(selectedView: View, position: Int) {
         if (selectedSeriesGroupPosition == position) return
-        val previousPos = selectedSeriesGroupPosition
+        val previousView = mSeriesGroupView?.layoutManager?.findViewByPosition(selectedSeriesGroupPosition)
+        previousView?.findViewById<View>(R.id.tvSeriesFlagSelect)?.visibility = View.GONE
         selectedSeriesGroupPosition = position
-        seriesGroupAdapter?.notifyItemChanged(previousPos)
-        seriesGroupAdapter?.notifyItemChanged(position)
+        selectedView.findViewById<View>(R.id.tvSeriesFlagSelect)?.visibility = View.VISIBLE
     }
 
     fun customSeriesScrollPos(targetPos: Int) {

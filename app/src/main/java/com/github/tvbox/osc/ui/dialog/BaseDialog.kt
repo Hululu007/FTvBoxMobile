@@ -1,7 +1,6 @@
 package com.github.tvbox.osc.ui.dialog
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -9,11 +8,14 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.activity.ComponentDialog
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.fbox.mobile.MobileSheets
 import com.github.tvbox.osc.R
 import xyz.doikki.videoplayer.util.CutoutUtil
 
-open class BaseDialog : Dialog {
+open class BaseDialog : ComponentDialog {
     private var phoneSheetInstalled = false
     private var sheetLayout = ""
     var sheetLayoutName: String
@@ -27,6 +29,13 @@ open class BaseDialog : Dialog {
     override fun setContentView(layoutResID: Int) {
         sheetLayout = context.resources.getResourceEntryName(layoutResID)
         super.setContentView(layoutResID)
+    }
+
+    override fun setContentView(view: View) {
+        // Keep owners on the content while MobileSheets reparents it and on dialog reuse.
+        view.setViewTreeLifecycleOwner(this)
+        view.setViewTreeSavedStateRegistryOwner(this)
+        super.setContentView(view)
     }
 
     override fun setTitle(title: CharSequence?) {
@@ -87,6 +96,7 @@ open class BaseDialog : Dialog {
         if (isContextInvalid()) {
             return
         }
+        initializeViewTreeOwners()
         window?.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.show()
         hideSysBar()

@@ -1,56 +1,33 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.graphics.Color
+import android.widget.TextView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.LiveChannelItem
-import com.github.tvbox.osc.ui.compose.LiveChannelItem
 import java.util.ArrayList
 
-class LiveChannelItemAdapter : BaseQuickAdapter<LiveChannelItem, BaseViewHolder>(0, ArrayList()) {
+class LiveChannelItemAdapter : BaseQuickAdapter<LiveChannelItem, BaseViewHolder>(R.layout.item_live_channel, ArrayList()) {
     private var selectedChannelIndex = -1
     private var focusedChannelIndex = -1
 
-    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
-        val composeView = ComposeView(parent.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        return BaseViewHolder(composeView)
-    }
-
     override fun convert(holder: BaseViewHolder, item: LiveChannelItem?) {
         if (item == null) return
-        val composeView = holder.itemView as ComposeView
+        val tvChannelNum = holder.getView<TextView>(R.id.tvChannelNum)
+        val tvChannel = holder.getView<TextView>(R.id.tvChannelName)
+        tvChannelNum.text = item.getChannelNum().toString()
+        tvChannel.text = item.getChannelName()
+        tvChannelNum.isSelected = true
+        tvChannel.isSelected = true
         val channelIndex = item.getChannelIndex()
-        val isSelected = channelIndex == selectedChannelIndex
-        val isFocused = channelIndex == focusedChannelIndex
-
-        composeView.setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFFAEC6FF),
-                    background = Color(0xFF10131A),
-                    surface = Color(0xFF171C26),
-                )
-            ) {
-                LiveChannelItem(
-                    channelNum = item.getChannelNum().toString(),
-                    channelName = item.getChannelName() ?: "",
-                    isSelected = isSelected,
-                    isFocused = isFocused,
-                    onClick = {
-                        val pos = holder.adapterPosition
-                        if (pos in 0 until data.size) {
-                            onItemClickListener?.onItemClick(this@LiveChannelItemAdapter, composeView, pos)
-                        }
-                    }
-                )
-            }
+        holder.itemView.isSelected = channelIndex == selectedChannelIndex
+        if (channelIndex == selectedChannelIndex && channelIndex != focusedChannelIndex) {
+            tvChannelNum.setTextColor(mContext.resources.getColor(R.color.color_1890FF))
+            tvChannel.setTextColor(mContext.resources.getColor(R.color.color_1890FF))
+        } else {
+            tvChannelNum.setTextColor(Color.WHITE)
+            tvChannel.setTextColor(Color.WHITE)
         }
     }
 

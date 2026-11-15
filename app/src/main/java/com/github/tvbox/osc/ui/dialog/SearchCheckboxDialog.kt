@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.ui.compose.CheckboxSearchDialogContent
+import com.github.tvbox.osc.util.SearchHelper
 import java.util.HashMap
 
 class SearchCheckboxDialog(
@@ -68,7 +69,15 @@ class SearchCheckboxDialog(
         setContentView(composeView)
     }
 
+    override fun show() {
+        sourceListState = mSourceList.toList()
+        checkedSourcesState = mCheckSourcees?.toMap() ?: emptyMap()
+        super.show()
+    }
+
     override fun dismiss() {
+        val checked = HashMap(checkedSourcesState)
+        SearchHelper.putCheckedSources(checked, sourceListState.all { checked.containsKey(it.key) })
         super.dismiss()
     }
 

@@ -2,182 +2,193 @@ package com.github.tvbox.osc.ui.dialog
 
 import android.app.Activity
 import android.content.Context
+import android.widget.TextView
 import android.widget.Toast
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import com.github.tvbox.osc.ui.compose.SubtitleDialogContent
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.util.FastClickCheckUtil
 import com.github.tvbox.osc.util.SubtitleHelper
 
 class SubtitleDialog(context: Context) : BaseDialog(context) {
 
     @JvmField
-    var selectInternal: android.view.View? = null
-    var selectInternalVisible by mutableStateOf(false)
+    var selectInternal: TextView? = null
+    private lateinit var selectLocal: TextView
+    private lateinit var selectRemote: TextView
+    private lateinit var subtitleSizeMinus: TextView
+    private lateinit var subtitleSizeText: TextView
+    private lateinit var subtitleSizePlus: TextView
+    private lateinit var subtitleTimeMinus: TextView
+    private lateinit var subtitleTimeText: TextView
+    private lateinit var subtitleTimePlus: TextView
+    private lateinit var subtitleStyleOne: TextView
+    private lateinit var subtitleStyleTwo: TextView
+    private lateinit var subtitlePositionText: TextView
+    private lateinit var subtitleTimeHint: TextView
     private var exoInternalSubtitle = false
-
-    private var sizeTextState by mutableStateOf("16")
-    private var styleOneTextState by mutableStateOf("字幕样式一")
-    private var styleTwoTextState by mutableStateOf("字幕样式二")
-    private var styleTwoColorState by mutableStateOf(Color(0xFFFFB6C1))
-    private var positionTextState by mutableStateOf("")
-    private var delayHintTextState by mutableStateOf("仅对外挂字幕有效")
-    private var delayTimeTextState by mutableStateOf("0")
 
     private var mSearchSubtitleListener: SearchSubtitleListener? = null
     private var mLocalFileChooserListener: LocalFileChooserListener? = null
     private var mSubtitleViewListener: SubtitleViewListener? = null
 
     init {
-        sheetLayoutName = "dialog_subtitle"
         if (context is Activity) {
             setOwnerActivity(context)
         }
-        selectInternal = object : android.view.View(context) {
-            override fun setVisibility(visibility: Int) {
-                super.setVisibility(visibility)
-                selectInternalVisible = visibility == android.view.View.VISIBLE
-            }
+        setContentView(R.layout.dialog_subtitle)
+        initView(context)
+    }
+
+    private fun initView(context: Context) {
+        selectInternal = findViewById(R.id.selectInternal)
+        selectLocal = findViewById(R.id.selectLocal)
+        selectRemote = findViewById(R.id.selectRemote)
+        subtitleSizeMinus = findViewById(R.id.subtitleSizeMinus)
+        subtitleSizeText = findViewById(R.id.subtitleSizeText)
+        subtitleSizePlus = findViewById(R.id.subtitleSizePlus)
+        subtitleTimeMinus = findViewById(R.id.subtitleTimeMinus)
+        subtitleTimeText = findViewById(R.id.subtitleTimeText)
+        subtitleTimePlus = findViewById(R.id.subtitleTimePlus)
+        subtitleStyleOne = findViewById(R.id.subtitleStyleOne)
+        subtitleStyleTwo = findViewById(R.id.subtitleStyleTwo)
+        subtitlePositionText = findViewById(R.id.subtitlePositionText)
+        subtitleTimeHint = findViewById(R.id.subtitleTimeHint)
+
+        selectLocal.setOnClickListener { view ->
+            FastClickCheckUtil.check(view)
+            dismiss()
+            mLocalFileChooserListener?.openLocalFileChooserDialog()
         }
+
+        selectRemote.setOnClickListener { view ->
+            FastClickCheckUtil.check(view)
+            dismiss()
+            mSearchSubtitleListener?.openSearchSubtitleDialog()
+        }
+
         val size = SubtitleHelper.getTextSize(ownerActivity)
-        sizeTextState = size.toString()
+        subtitleSizeText.text = size.toString()
+
+        subtitleSizeMinus.setOnClickListener {
+            if (exoInternalSubtitle) {
+                val scale = Math.max(50, SubtitleHelper.getExoSubtitleScale() - 5)
+                subtitleSizeText.text = "$scale%"
+                SubtitleHelper.setExoSubtitleScale(scale)
+                mSubtitleViewListener?.setSubtitleScale(scale)
+                return@setOnClickListener
+            }
+            val sizeStr = subtitleSizeText.text.toString()
+            var curSize = sizeStr.toIntOrNull() ?: 0
+            curSize -= 2
+            if (curSize <= 12) {
+                curSize = 12
+            }
+            subtitleSizeText.text = curSize.toString()
+            SubtitleHelper.setTextSize(curSize)
+            mSubtitleViewListener?.setTextSize(curSize)
+        }
+        subtitleSizePlus.setOnClickListener {
+            if (exoInternalSubtitle) {
+                val scale = Math.min(200, SubtitleHelper.getExoSubtitleScale() + 5)
+                subtitleSizeText.text = "$scale%"
+                SubtitleHelper.setExoSubtitleScale(scale)
+                mSubtitleViewListener?.setSubtitleScale(scale)
+                return@setOnClickListener
+            }
+            val sizeStr = subtitleSizeText.text.toString()
+            var curSize = sizeStr.toIntOrNull() ?: 0
+            curSize += 2
+            if (curSize >= 60) {
+                curSize = 60
+            }
+            subtitleSizeText.text = curSize.toString()
+            SubtitleHelper.setTextSize(curSize)
+            mSubtitleViewListener?.setTextSize(curSize)
+        }
 
         val timeDelay = SubtitleHelper.getTimeDelay()
+        var timeStr = "0"
         if (timeDelay != 0) {
             val dbTimeDelay = timeDelay.toDouble() / 1000
-            delayTimeTextState = dbTimeDelay.toString()
+            timeStr = dbTimeDelay.toString()
+        }
+        subtitleTimeText.text = timeStr
+
+        subtitleTimeMinus.setOnClickListener { view ->
+            FastClickCheckUtil.check(view)
+            val currentStr = subtitleTimeText.text.toString()
+            var time = currentStr.toDoubleOrNull() ?: 0.0
+            val onceDelay = -0.5
+            time += onceDelay
+            val newTimeStr = if (time == 0.0) "0" else time.toString()
+            subtitleTimeText.text = newTimeStr
+            val mseconds = (onceDelay * 1000).toInt()
+            SubtitleHelper.setTimeDelay((time * 1000).toInt())
+            mSubtitleViewListener?.setSubtitleDelay(mseconds)
+        }
+        subtitleTimePlus.setOnClickListener { view ->
+            FastClickCheckUtil.check(view)
+            val currentStr = subtitleTimeText.text.toString()
+            var time = currentStr.toDoubleOrNull() ?: 0.0
+            val onceDelay = 0.5
+            time += onceDelay
+            val newTimeStr = if (time == 0.0) "0" else time.toString()
+            subtitleTimeText.text = newTimeStr
+            val mseconds = (onceDelay * 1000).toInt()
+            SubtitleHelper.setTimeDelay((time * 1000).toInt())
+            mSubtitleViewListener?.setSubtitleDelay(mseconds)
+        }
+        selectInternal?.setOnClickListener { view ->
+            FastClickCheckUtil.check(view)
+            dismiss()
+            mSubtitleViewListener?.selectInternalSubtitle()
         }
 
-        val composeView = ComposeView(context).apply {
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    SubtitleDialogContent(
-                        showInternal = selectInternalVisible,
-                        onSelectInternal = {
-                            dismiss()
-                            mSubtitleViewListener?.selectInternalSubtitle()
-                        },
-                        onSelectLocal = {
-                            dismiss()
-                            mLocalFileChooserListener?.openLocalFileChooserDialog()
-                        },
-                        onSelectRemote = {
-                            dismiss()
-                            mSearchSubtitleListener?.openSearchSubtitleDialog()
-                        },
-                        sizeText = sizeTextState,
-                        onSizeMinus = { onSizeMinusClick() },
-                        onSizePlus = { onSizePlusClick() },
-                        styleOneText = styleOneTextState,
-                        styleTwoText = styleTwoTextState,
-                        styleTwoColor = styleTwoColorState,
-                        positionText = positionTextState,
-                        onStyleOneClick = { onStyleOne() },
-                        onStyleTwoClick = { onStyleTwo() },
-                        delayHintText = delayHintTextState,
-                        delayTimeText = delayTimeTextState,
-                        onDelayMinus = { onDelayChange(-0.5) },
-                        onDelayPlus = { onDelayChange(0.5) }
-                    )
-                }
+        subtitleStyleOne.setOnClickListener {
+            if (exoInternalSubtitle) {
+                val position = Math.min(80.0f, SubtitleHelper.getExoSubtitlePosition() + 0.5f)
+                SubtitleHelper.setExoSubtitlePosition(position)
+                subtitlePositionText.text = if (position == 0.0f) "0" else "$position%"
+                mSubtitleViewListener?.moveSubtitle(position)
+                return@setOnClickListener
             }
+            val style = 0
+            dismiss()
+            mSubtitleViewListener?.setTextStyle(style)
+            Toast.makeText(context, "设置样式成功", Toast.LENGTH_SHORT).show()
         }
-        setContentView(composeView)
-    }
 
-    private fun onSizeMinusClick() {
-        if (exoInternalSubtitle) {
-            val scale = Math.max(50, SubtitleHelper.getExoSubtitleScale() - 5)
-            sizeTextState = "$scale%"
-            SubtitleHelper.setExoSubtitleScale(scale)
-            mSubtitleViewListener?.setSubtitleScale(scale)
-            return
+        subtitleStyleTwo.setOnClickListener {
+            if (exoInternalSubtitle) {
+                val position = Math.max(-80.0f, SubtitleHelper.getExoSubtitlePosition() - 0.5f)
+                SubtitleHelper.setExoSubtitlePosition(position)
+                subtitlePositionText.text = if (position == 0.0f) "0" else "$position%"
+                mSubtitleViewListener?.moveSubtitle(position)
+                return@setOnClickListener
+            }
+            val style = 1
+            dismiss()
+            mSubtitleViewListener?.setTextStyle(style)
+            Toast.makeText(context, "设置样式成功", Toast.LENGTH_SHORT).show()
         }
-        var curSize = sizeTextState.toIntOrNull() ?: 0
-        curSize -= 2
-        if (curSize <= 12) {
-            curSize = 12
-        }
-        sizeTextState = curSize.toString()
-        SubtitleHelper.setTextSize(curSize)
-        mSubtitleViewListener?.setTextSize(curSize)
-    }
-
-    private fun onSizePlusClick() {
-        if (exoInternalSubtitle) {
-            val scale = Math.min(200, SubtitleHelper.getExoSubtitleScale() + 5)
-            sizeTextState = "$scale%"
-            SubtitleHelper.setExoSubtitleScale(scale)
-            mSubtitleViewListener?.setSubtitleScale(scale)
-            return
-        }
-        var curSize = sizeTextState.toIntOrNull() ?: 0
-        curSize += 2
-        if (curSize >= 60) {
-            curSize = 60
-        }
-        sizeTextState = curSize.toString()
-        SubtitleHelper.setTextSize(curSize)
-        mSubtitleViewListener?.setTextSize(curSize)
-    }
-
-    private fun onDelayChange(delta: Double) {
-        var time = delayTimeTextState.toDoubleOrNull() ?: 0.0
-        time += delta
-        val newTimeStr = if (time == 0.0) "0" else time.toString()
-        delayTimeTextState = newTimeStr
-        val mseconds = (delta * 1000).toInt()
-        SubtitleHelper.setTimeDelay((time * 1000).toInt())
-        mSubtitleViewListener?.setSubtitleDelay(mseconds)
-    }
-
-    private fun onStyleOne() {
-        if (exoInternalSubtitle) {
-            val position = Math.min(80.0f, SubtitleHelper.getExoSubtitlePosition() + 0.5f)
-            SubtitleHelper.setExoSubtitlePosition(position)
-            positionTextState = if (position == 0.0f) "0" else "$position%"
-            mSubtitleViewListener?.moveSubtitle(position)
-            return
-        }
-        dismiss()
-        mSubtitleViewListener?.setTextStyle(0)
-        Toast.makeText(context, "设置样式成功", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun onStyleTwo() {
-        if (exoInternalSubtitle) {
-            val position = Math.max(-80.0f, SubtitleHelper.getExoSubtitlePosition() - 0.5f)
-            SubtitleHelper.setExoSubtitlePosition(position)
-            positionTextState = if (position == 0.0f) "0" else "$position%"
-            mSubtitleViewListener?.moveSubtitle(position)
-            return
-        }
-        dismiss()
-        mSubtitleViewListener?.setTextStyle(1)
-        Toast.makeText(context, "设置样式成功", Toast.LENGTH_SHORT).show()
     }
 
     fun setExoInternalSubtitle(exoInternalSubtitle: Boolean) {
         this.exoInternalSubtitle = exoInternalSubtitle
         if (exoInternalSubtitle) {
-            sizeTextState = "${SubtitleHelper.getExoSubtitleScale()}%"
-            styleOneTextState = "字幕上移"
-            styleTwoTextState = "字幕下移"
-            styleTwoColorState = Color.White
+            subtitleSizeText.text = "${SubtitleHelper.getExoSubtitleScale()}%"
+            subtitleStyleOne.text = "字幕上移"
+            subtitleStyleTwo.text = "字幕下移"
+            subtitleStyleTwo.setTextColor(context.resources.getColor(R.color.dialog_text_primary))
             val position = SubtitleHelper.getExoSubtitlePosition()
-            positionTextState = if (position == 0.0f) "0" else "$position%"
-            delayHintTextState = "字幕延时对内置字幕有效"
+            subtitlePositionText.text = if (position == 0.0f) "0" else "$position%"
+            subtitleTimeHint.text = "字幕延时对内置字幕有效"
         } else {
-            sizeTextState = SubtitleHelper.getTextSize(ownerActivity).toString()
-            styleOneTextState = "字幕样式一"
-            styleTwoTextState = "字幕样式二"
-            styleTwoColorState = Color(0xFFFFB6C1)
-            positionTextState = ""
-            delayHintTextState = "字幕延时仅对外挂字幕有效"
+            subtitleSizeText.text = SubtitleHelper.getTextSize(ownerActivity).toString()
+            subtitleStyleOne.text = "字幕样式一"
+            subtitleStyleTwo.text = "字幕样式二"
+            subtitleStyleTwo.setTextColor(context.resources.getColor(R.color.color_FFB6C1))
+            subtitlePositionText.text = ""
+            subtitleTimeHint.text = "字幕延时仅对外挂字幕有效"
         }
     }
 

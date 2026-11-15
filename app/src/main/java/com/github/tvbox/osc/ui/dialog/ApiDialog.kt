@@ -2,16 +2,16 @@ package com.github.tvbox.osc.ui.dialog
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.view.KeyEvent
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
+import com.github.tvbox.osc.R
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter
-import com.github.tvbox.osc.ui.compose.ApiDialogContent
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper
 import com.orhanobut.hawk.Hawk
@@ -26,89 +26,116 @@ import java.util.ArrayList
  * @since 2020/12/27
  */
 class ApiDialog(context: Context) : BaseDialog(context) {
-    private var apiText by mutableStateOf("")
-    private var liveApiText by mutableStateOf("")
+    private val inputApi: EditText
+    private val inputApiLive: EditText
+    private val inputConfirm: View
     private var listener: OnListener? = null
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun refresh(event: RefreshEvent) {
         if (event.type == RefreshEvent.TYPE_API_URL_CHANGE) {
-            val url = (event.obj as? String) ?: ""
-            apiText = url
-            liveApiText = url
+            inputApi.setText((event.obj as? String) ?: "")
+            inputApiLive.setText((event.obj as? String) ?: "")
         } else if (event.type == RefreshEvent.TYPE_LIVE_API_URL_CHANGE) {
-            liveApiText = (event.obj as? String) ?: ""
+            inputApiLive.setText((event.obj as? String) ?: "")
         }
     }
 
     init {
-        sheetLayoutName = "dialog_api"
+        setContentView(R.layout.dialog_api)
         setCanceledOnTouchOutside(false)
+        inputApi = findViewById(R.id.input)
+        inputApiLive = findViewById(R.id.inputLive)
+        inputConfirm = findViewById(R.id.inputConfirm)
 
-        apiText = Hawk.get(HawkConfig.API_URL, "")
-        liveApiText = Hawk.get(HawkConfig.LIVE_API_URL, Hawk.get(HawkConfig.API_URL, ""))
+        inputApi.setText(Hawk.get(HawkConfig.API_URL, ""))
+        inputApiLive.setText(Hawk.get(HawkConfig.LIVE_API_URL, Hawk.get(HawkConfig.API_URL, "")))
 
-        val composeView = ComposeView(context).apply {
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    ApiDialogContent(
-                        apiText = apiText,
-                        onApiTextChange = { apiText = it },
-                        liveApiText = liveApiText,
-                        onLiveApiTextChange = { liveApiText = it },
-                        onPasteApi = { pasteInto { apiText = it } },
-                        onSelectFileApi = { listener?.onLocalConfig(false) },
-                        onPasteLive = { pasteInto { liveApiText = it } },
-                        onSelectFileLive = { listener?.onLocalConfig(true) },
-                        onLiveHistory = { openLiveHistory() },
-                        onCancel = { cancel() },
-                        onConfirm = { saveAndDismiss() }
-                    )
+        findViewById<View>(R.id.inputSubmit).setOnClickListener {
+            listener?.onLocalConfig(false)
+        }
+        findViewById<View>(R.id.inputSubmitLive).setOnClickListener {
+            listener?.onLocalConfig(true)
+        }
+        inputConfirm.setOnClickListener {
+            saveAndDismiss()
+        }
+        findViewById<View>(R.id.apiHistory).setOnClickListener {
+            val history = Hawk.get(HawkConfig.LIVE_API_HISTORY, ArrayList<String>())
+            if (history.isEmpty()) {
+                Toast.makeText(getContext(), "直播历史为空", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val current = Hawk.get(HawkConfig.LIVE_API_URL, "")
+            var idx = 0
+            if (history.contains(current)) {
+                idx = history.indexOf(current)
+            }
+            val dialog = ApiHistoryDialog(getContext())
+            dialog.setTip("直播历史配置")
+            dialog.setAdapter(object : ApiHistoryDialogAdapter.SelectDialogInterface {
+                override fun click(value: String) {
+                    inputApiLive.setText(value)
+                    dialog.dismiss()
                 }
+
+                override fun del(value: String, data: ArrayList<String>) {
+                    Hawk.put(HawkConfig.LIVE_API_HISTORY, data)
+                }
+            }, history, idx)
+            dialog.show()
+        }
+        findViewById<View>(R.id.mobilePasteApi).setOnClickListener { pasteInto(inputApi) }
+        findViewById<View>(R.id.mobilePasteLive).setOnClickListener { pasteInto(inputApiLive) }
+        findViewById<View>(R.id.mobileCancelApi).setOnClickListener { cancel() }
+
+        inputApi.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_NEXT || isSoftKeyboardEnter(actionId, event)) {
+                inputApiLive.requestFocus()
+                inputApiLive.setSelection(inputApiLive.text?.length ?: 0)
+                true
+            } else {
+                false
             }
         }
-        setContentView(composeView)
+        inputApiLive.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == EditorInfo.IME_ACTION_DONE || isSoftKeyboardEnter(actionId, event)) {
+                focusConfirm()
+                true
+            } else {
+                false
+            }
+        }
     }
 
-    private fun openLiveHistory() {
-        val history = Hawk.get(HawkConfig.LIVE_API_HISTORY, ArrayList<String>())
-        if (history.isEmpty()) {
-            Toast.makeText(context, "直播历史为空", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val current = Hawk.get(HawkConfig.LIVE_API_URL, "")
-        var idx = 0
-        if (history.contains(current)) {
-            idx = history.indexOf(current)
-        }
-        val dialog = ApiHistoryDialog(context)
-        dialog.setTip("直播历史配置")
-        dialog.setAdapter(object : ApiHistoryDialogAdapter.SelectDialogInterface {
-            override fun click(value: String) {
-                liveApiText = value
-                dialog.dismiss()
-            }
-
-            override fun del(value: String, data: ArrayList<String>) {
-                Hawk.put(HawkConfig.LIVE_API_HISTORY, data)
-            }
-        }, history, idx)
-        dialog.show()
+    private fun isSoftKeyboardEnter(actionId: Int, event: KeyEvent?): Boolean {
+        return actionId == EditorInfo.IME_NULL
+                && event != null
+                && event.action == KeyEvent.ACTION_UP
+                && event.keyCode == KeyEvent.KEYCODE_ENTER
     }
 
-    private fun pasteInto(setter: (String) -> Unit) {
+    private fun focusConfirm() {
+        val imm = inputApiLive.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(inputApiLive.windowToken, 0)
+        inputApiLive.clearFocus()
+        inputConfirm.requestFocus()
+    }
+
+    private fun pasteInto(input: EditText) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.primaryClip == null) {
             Toast.makeText(context, "剪贴板中没有内容", Toast.LENGTH_SHORT).show()
             return
         }
         val value = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)
-        setter(value?.toString()?.trim() ?: "")
+        input.setText(value?.toString()?.trim() ?: "")
+        input.setSelection(input.length())
     }
 
     private fun saveAndDismiss() {
-        val newApi = apiText.trim()
-        var newLiveApi = liveApiText.trim()
+        val newApi = inputApi.text.toString().trim()
+        var newLiveApi = inputApiLive.text.toString().trim()
         if (newApi.isNotEmpty()) {
             HistoryHelper.setApiHistory(newApi)
         }
@@ -127,9 +154,9 @@ class ApiDialog(context: Context) : BaseDialog(context) {
 
     fun setLocalApi(api: String?, live: Boolean) {
         if (live) {
-            liveApiText = api ?: ""
+            inputApiLive.setText(api)
         } else {
-            apiText = api ?: ""
+            inputApi.setText(api)
         }
     }
 

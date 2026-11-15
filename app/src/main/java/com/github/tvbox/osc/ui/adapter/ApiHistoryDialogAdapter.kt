@@ -1,15 +1,13 @@
 package com.github.tvbox.osc.ui.adapter
 
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.github.tvbox.osc.ui.compose.DialogApiHistoryItem
+import com.github.tvbox.osc.R
 import com.github.tvbox.osc.util.HistoryHelper
 import java.util.ArrayList
 
@@ -24,7 +22,7 @@ class ApiHistoryDialogAdapter(private val dialogInterface: SelectDialogInterface
         }
     }) {
 
-    class SelectViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView)
+    class SelectViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     interface SelectDialogInterface {
         fun click(value: String)
@@ -48,10 +46,9 @@ class ApiHistoryDialogAdapter(private val dialogInterface: SelectDialogInterface
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SelectViewHolder {
-        val composeView = ComposeView(parent.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        return SelectViewHolder(composeView)
+        return SelectViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.item_dialog_api_history, parent, false)
+        )
     }
 
     override fun onBindViewHolder(holder: SelectViewHolder, position: Int) {
@@ -63,37 +60,20 @@ class ApiHistoryDialogAdapter(private val dialogInterface: SelectDialogInterface
         if (select == value) {
             name = "√ $name"
         }
-
-        holder.composeView.setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFFAEC6FF),
-                    background = Color(0xFF10131A),
-                    surface = Color(0xFF171C26),
-                )
-            ) {
-                DialogApiHistoryItem(
-                    name = name,
-                    onNameClick = {
-                        if (select == value) return@DialogApiHistoryItem
-                        val oldIndex = data.indexOf(select)
-                        select = value
-                        if (oldIndex != -1) notifyItemChanged(oldIndex)
-                        val newIndex = data.indexOf(value)
-                        if (newIndex != -1) notifyItemChanged(newIndex)
-                        dialogInterface?.click(value)
-                    },
-                    onDeleteClick = {
-                        if (select == value) return@DialogApiHistoryItem
-                        val removeIndex = data.indexOf(value)
-                        if (removeIndex != -1) {
-                            notifyItemRemoved(removeIndex)
-                            data.remove(value)
-                            dialogInterface?.del(value, data)
-                        }
-                    }
-                )
-            }
+        holder.itemView.findViewById<TextView>(R.id.tvName).text = name
+        holder.itemView.findViewById<View>(R.id.tvName).setOnClickListener {
+            if (select == value) return@setOnClickListener
+            notifyItemChanged(data.indexOf(select))
+            select = value
+            notifyItemChanged(data.indexOf(value))
+            dialogInterface?.click(value)
+        }
+        holder.itemView.findViewById<View>(R.id.tvDel).setOnClickListener {
+            if (select == value) return@setOnClickListener
+            val removeIndex = data.indexOf(value)
+            notifyItemRemoved(removeIndex)
+            data.remove(value)
+            dialogInterface?.del(value, data)
         }
     }
 }

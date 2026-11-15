@@ -17,6 +17,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.widget.NestedScrollView
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.ui.dialog.BaseDialog
@@ -136,17 +137,24 @@ object MobileSheets {
             installHorizontalDragDismiss(header, sheet, dialog)
         }
 
-        val scroll = NestedScrollView(context)
-        scroll.isFillViewport = true
-        scroll.clipToPadding = false
         body.setBackgroundColor(Color.TRANSPARENT)
-        scroll.addView(body, FrameLayout.LayoutParams(-1, -1))
+        // Compose owns its scroll containers and needs the sheet's finite height.
+        // A NestedScrollView measures its child with an unbounded height instead.
+        val bodyHost = if (body is ComposeView) {
+            body
+        } else {
+            NestedScrollView(context).apply {
+                isFillViewport = true
+                clipToPadding = false
+                addView(body, FrameLayout.LayoutParams(-1, -1))
+            }
+        }
         val bodyParams = if (portrait) {
             LinearLayout.LayoutParams(-1, -2, 1f)
         } else {
             LinearLayout.LayoutParams(-1, 0, 1f)
         }
-        sheet.addView(scroll, bodyParams)
+        sheet.addView(bodyHost, bodyParams)
 
         if (footer != null) {
             val footerParams = LinearLayout.LayoutParams(-1, -2)

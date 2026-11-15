@@ -1,16 +1,16 @@
 package com.github.tvbox.osc.ui.adapter
 
 import android.annotation.SuppressLint
+import android.graphics.Color
+import android.graphics.Typeface
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.github.tvbox.osc.ui.compose.SelectDialogItem
+import com.github.tvbox.osc.R
 import java.util.ArrayList
 
 // Callers can pass value types; the fallback uses their normal equality semantics.
@@ -25,7 +25,7 @@ class SelectDialogAdapter<T : Any>(
     }
 ) {
 
-    class SelectViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView)
+    class SelectViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     interface SelectDialogInterface<T> {
         fun click(value: T, pos: Int)
@@ -62,38 +62,31 @@ class SelectDialogAdapter<T : Any>(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SelectViewHolder {
-        val composeView = ComposeView(parent.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        return SelectViewHolder(composeView)
+        return SelectViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.item_dialog_select, parent, false)
+        )
     }
 
     override fun onBindViewHolder(holder: SelectViewHolder, @SuppressLint("RecyclerView") position: Int) {
         val value = data[position]
         val name = dialogInterface?.getDisplay(value) ?: ""
-        val isSelected = position == select
-
-        holder.composeView.setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFFAEC6FF),
-                    background = Color(0xFF10131A),
-                    surface = Color(0xFF171C26),
-                )
-            ) {
-                SelectDialogItem(
-                    text = name,
-                    isSelected = isSelected,
-                    onClick = {
-                        if (position == select) return@SelectDialogItem
-                        val oldSelect = select
-                        select = position
-                        notifyItemChanged(oldSelect)
-                        notifyItemChanged(select)
-                        dialogInterface?.click(value, position)
-                    }
-                )
-            }
+        val view = holder.itemView.findViewById<TextView>(R.id.tvName)
+        view.isSelected = position == select
+        view.setCompoundDrawablesWithIntrinsicBounds(0, 0, if (position == select) R.drawable.ic_mobile_check else 0, 0)
+        if (position == select) {
+            view.setTextColor(-0x513901) // 0xffaec6ff
+            view.typeface = Typeface.defaultFromStyle(Typeface.BOLD)
+        } else {
+            view.setTextColor(Color.WHITE)
+            view.typeface = Typeface.defaultFromStyle(Typeface.NORMAL)
+        }
+        view.text = name
+        holder.itemView.setOnClickListener {
+            if (position == select) return@setOnClickListener
+            notifyItemChanged(select)
+            select = position
+            notifyItemChanged(select)
+            dialogInterface?.click(value, position)
         }
     }
 }

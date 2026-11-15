@@ -2,26 +2,25 @@ package com.github.tvbox.osc.ui.dialog
 
 import android.content.Context
 import android.os.Bundle
+import android.view.View
+import android.widget.TextView
 import android.widget.Toast
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
 import androidx.recyclerview.widget.DiffUtil
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.callback.EmptyCallback
+import com.github.tvbox.osc.callback.LoadingCallback
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter
-import com.github.tvbox.osc.ui.compose.SearchRemoteTvDialogContent
 import com.github.tvbox.osc.ui.fragment.ModelSettingFragment
+import com.kingja.loadsir.core.LoadService
+import com.kingja.loadsir.core.LoadSir
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
 
-    private var titleText by mutableStateOf("")
-    private var isLoadingState by mutableStateOf(true)
+    private var mLoadService: LoadService<Any>? = null
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun refresh(event: RefreshEvent) {
@@ -31,18 +30,7 @@ class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
     }
 
     init {
-        sheetLayoutName = "dialog_search_remotetv"
-        val composeView = ComposeView(context).apply {
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    SearchRemoteTvDialogContent(
-                        title = titleText,
-                        isLoading = isLoadingState
-                    )
-                }
-            }
-        }
-        setContentView(composeView)
+        setContentView(R.layout.dialog_search_remotetv)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,8 +38,8 @@ class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
     }
 
     fun setTip(tip: String?) {
-        titleText = tip ?: ""
-        setTitle(tip)
+        findViewById<TextView>(R.id.title)?.text = tip
+        setLoadSir(findViewById(R.id.list))
         showLoading()
     }
 
@@ -90,15 +78,22 @@ class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
         dialog.show()
     }
 
+    protected fun setLoadSir(view: View) {
+        if (mLoadService == null) {
+            @Suppress("UNCHECKED_CAST")
+            mLoadService = LoadSir.getDefault().register(view) {} as? LoadService<Any>
+        }
+    }
+
     fun showLoading() {
-        isLoadingState = true
+        mLoadService?.showCallback(LoadingCallback::class.java)
     }
 
     fun showEmpty() {
-        isLoadingState = false
+        mLoadService?.showCallback(EmptyCallback::class.java)
     }
 
     fun showSuccess() {
-        isLoadingState = false
+        mLoadService?.showSuccess()
     }
 }

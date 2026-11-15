@@ -1,17 +1,15 @@
 package com.github.tvbox.osc.ui.adapter
 
 import android.annotation.SuppressLint
+import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.widget.CheckBox
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.SourceBean
-import com.github.tvbox.osc.ui.compose.DialogCheckboxSearchItem
 import com.github.tvbox.osc.util.SearchHelper
 import java.util.ArrayList
 import java.util.HashMap
@@ -24,10 +22,9 @@ class CheckboxSearchAdapter(diffCallback: DiffUtil.ItemCallback<SourceBean>) :
     var mCheckedSources: HashMap<String, String>? = HashMap()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val composeView = ComposeView(parent.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        return ViewHolder(composeView)
+        return ViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.item_dialog_checkbox_search, parent, false)
+        )
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -51,36 +48,28 @@ class CheckboxSearchAdapter(diffCallback: DiffUtil.ItemCallback<SourceBean>) :
         val pos = holder.adapterPosition
         if (pos !in data.indices) return
         val sourceBean = data[pos]
+        holder.oneSearchSource.text = sourceBean.name
+        holder.oneSearchSource.setOnCheckedChangeListener(null)
         val checked = mCheckedSources
-        val isChecked = checked?.containsKey(sourceBean.key) == true
-
-        holder.composeView.setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFFAEC6FF),
-                    background = Color(0xFF10131A),
-                    surface = Color(0xFF171C26),
-                )
-            ) {
-                DialogCheckboxSearchItem(
-                    name = sourceBean.name ?: "",
-                    isChecked = isChecked,
-                    onCheckedChange = { checkState ->
-                        val curChecked = mCheckedSources ?: HashMap<String, String>().also { mCheckedSources = it }
-                        val key = sourceBean.key
-                        if (key != null) {
-                            if (checkState) {
-                                curChecked[key] = "1"
-                            } else {
-                                curChecked.remove(key)
-                            }
-                        }
-                        notifyItemChanged(pos)
-                    }
-                )
+        if (checked != null) {
+            holder.oneSearchSource.isChecked = checked.containsKey(sourceBean.key)
+        }
+        holder.oneSearchSource.tag = sourceBean
+        holder.oneSearchSource.setOnCheckedChangeListener { _, isChecked ->
+            val curChecked = mCheckedSources ?: HashMap<String, String>().also { mCheckedSources = it }
+            val key = sourceBean.key
+            if (key != null) {
+                if (isChecked) {
+                    curChecked[key] = "1"
+                } else {
+                    curChecked.remove(key)
+                }
             }
+            notifyItemChanged(pos)
         }
     }
 
-    class ViewHolder(val composeView: ComposeView) : RecyclerView.ViewHolder(composeView)
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val oneSearchSource: CheckBox = view.findViewById(R.id.oneSearchSource)
+    }
 }

@@ -35,7 +35,12 @@ class ApiHistoryDialog(context: Context) : BaseDialog(context, R.style.CustomDia
                         },
                         onDeleteClick = { item, index ->
                             val current = ArrayList(itemsList)
-                            current.remove(item)
+                            current.removeAt(index)
+                            selectedIdx = when {
+                                index < selectedIdx -> selectedIdx - 1
+                                index == selectedIdx -> -1
+                                else -> selectedIdx
+                            }
                             itemsList = current
                             callback?.del(item, current)
                         }

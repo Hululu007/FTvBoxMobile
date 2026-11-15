@@ -1,51 +1,45 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.view.ViewGroup
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.app.Activity
+import android.graphics.Color
+import android.view.View
+import android.widget.TextView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.VodInfo
-import com.github.tvbox.osc.ui.compose.SeriesItem
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager
 import java.util.ArrayList
 
 class SeriesAdapter(private val mGridLayoutManager: V7GridLayoutManager) :
-    BaseQuickAdapter<VodInfo.VodSeries, BaseViewHolder>(0, ArrayList()) {
-
-    override fun onCreateDefViewHolder(parent: ViewGroup, viewType: Int): BaseViewHolder {
-        val composeView = ComposeView(parent.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
-        return BaseViewHolder(composeView)
-    }
+    BaseQuickAdapter<VodInfo.VodSeries, BaseViewHolder>(R.layout.item_series, ArrayList()) {
 
     override fun convert(helper: BaseViewHolder, item: VodInfo.VodSeries?) {
         if (item == null) return
-        val composeView = helper.itemView as ComposeView
+        val tvSeries = helper.getView<TextView>(R.id.tvSeries)
+        if (item.selected) {
+            tvSeries.setTextColor(mContext.resources.getColor(R.color.color_02F8E1))
+        } else {
+            tvSeries.setTextColor(Color.WHITE)
+        }
+        helper.setText(R.id.tvSeries, item.name ?: "")
 
-        composeView.setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = Color(0xFFAEC6FF),
-                    background = Color(0xFF10131A),
-                    surface = Color(0xFF171C26),
-                )
-            ) {
-                SeriesItem(
-                    name = item.name ?: "",
-                    isSelected = item.selected,
-                    onClick = {
-                        val pos = helper.adapterPosition
-                        if (pos in 0 until data.size) {
-                            onItemClickListener?.onItemClick(this@SeriesAdapter, composeView, pos)
-                        }
-                    }
-                )
+        if (data.size == 1 && helper.layoutPosition == 0) {
+            helper.itemView.nextFocusUpId = R.id.mGridViewFlag
+        }
+
+        val activity = helper.itemView.context as? Activity
+        val mSeriesGroupTv = activity?.findViewById<View>(R.id.mSeriesGroupTv)
+        if (data.size > 1 && mSeriesGroupTv != null && mSeriesGroupTv.visibility == View.VISIBLE) {
+            val spanCount = mGridLayoutManager.spanCount
+            val position = helper.layoutPosition
+            if (position < spanCount) {
+                helper.itemView.nextFocusUpId = R.id.mSeriesSortTv
             }
+        }
+        val mGridViewQuality = activity?.findViewById<View>(R.id.mGridViewQuality)
+        if (mGridViewQuality != null && mGridViewQuality.visibility == View.VISIBLE && helper.layoutPosition < mGridLayoutManager.spanCount) {
+            helper.itemView.nextFocusUpId = R.id.mGridViewQuality
         }
     }
 }

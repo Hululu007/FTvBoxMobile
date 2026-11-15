@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -75,6 +78,7 @@ fun ApiHistoryDialogContent(
                             .clip(ShapeRadius)
                             .background(bgColor, ShapeRadius)
                             .border(1.dp, strokeColor, ShapeRadius)
+                            .selectable(selected = isSelected, onClick = { onItemClick(item, index) })
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -84,13 +88,13 @@ fun ApiHistoryDialogContent(
                             fontSize = 14.sp,
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { onItemClick(item, index) }
                         )
                         Text(
                             text = "删除",
                             color = Color(0xFFFFB4AB),
                             fontSize = 13.sp,
                             modifier = Modifier
+                                .semantics { contentDescription = "删除配置 $item" }
                                 .clickable { onDeleteClick(item, index) }
                                 .padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
                         )

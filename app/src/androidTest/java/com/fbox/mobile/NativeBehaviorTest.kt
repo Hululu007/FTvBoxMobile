@@ -25,7 +25,9 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.base.DefaultFailureHandler
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.action.CoordinatesProvider
@@ -94,6 +96,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import xyz.doikki.videoplayer.player.VideoView
@@ -112,6 +115,9 @@ import java.util.function.BooleanSupplier
 
 @RunWith(AndroidJUnit4::class)
 class NativeBehaviorTest {
+    @get:Rule
+    val preferences = HawkPreferencesCheckpoint()
+
     private var server: FixtureServer? = null
     private lateinit var context: Context
     private var lastHomeStatus = ""
@@ -126,6 +132,9 @@ class NativeBehaviorTest {
     @Throws(Exception::class)
     fun loadFixtureConfig() {
         context = InstrumentationRegistry.getInstrumentation().targetContext
+        // Android 17 can stall PixelCopy while Espresso captures a failed interaction.
+        // Keep the original failure report and the explicit screenshots below.
+        Espresso.setFailureHandler(DefaultFailureHandler(context, false))
         InstrumentationRegistry.getInstrumentation().context.assets.open("smoke.mp4").use { input ->
             val bytes = ByteArrayOutputStream()
             val buffer = ByteArray(4096)
@@ -166,6 +175,7 @@ class NativeBehaviorTest {
 
     @After
     fun closeServer() {
+        Espresso.setFailureHandler(DefaultFailureHandler(context))
         server?.stop()
         if (!fixtureSettingsCaptured) return
         val staleFixture = previousSettings[HawkConfig.HOME_API] == "phone-fixture" &&
