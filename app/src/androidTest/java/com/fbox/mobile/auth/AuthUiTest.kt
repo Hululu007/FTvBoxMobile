@@ -8,8 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
-import androidx.fragment.app.Fragment
-import androidx.test.core.app.ActivityScenario
+import com.fbox.mobile.ScreenScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
@@ -25,7 +24,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.github.tvbox.osc.bean.SourceBean
-import com.github.tvbox.osc.ui.activity.SettingActivity
+import com.github.tvbox.osc.ui.activity.SettingsScreen
 import org.hamcrest.Matchers.containsString
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -41,29 +40,19 @@ import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(AndroidJUnit4::class)
 class AuthUiTest {
-    class Host : Fragment() {
-        override fun onCreateView(inflater: LayoutInflater, parent: ViewGroup?, state: Bundle?): View {
-            return FrameLayout(requireContext())
-        }
-    }
-
     private fun show(
-        activity: ActivityScenario<SettingActivity>,
+        activity: ScreenScenario<SettingsScreen>,
         provider: ConfigAuthProvider,
         backend: AuthSession.Backend,
         refreshed: Runnable
     ) {
         activity.onActivity { host ->
-            val container = FrameLayout(host)
-            container.id = View.generateViewId()
-            host.setContentView(container)
-            val fragment = Host()
-            host.supportFragmentManager.beginTransaction().add(container.id, fragment).commitNow()
             val source = SourceBean()
             source.key = "auth-fixture"
             source.type = 3
             source.api = "csp_PanConfigGuard"
-            MobileConfigAuth.LoginSheet(fragment, source, provider, false, refreshed, backend).show()
+            MobileConfigAuth.LoginSheet(host, source, provider, false, refreshed, backend,
+                openApp = { _, _, _ -> false }).show()
         }
     }
 
@@ -71,7 +60,7 @@ class AuthUiTest {
         val until = SystemClock.elapsedRealtime() + 5000
         while (true) {
             try {
-                onView(withText(containsString("没有找到可接收此授权链接的 App"))).check(matches(isDisplayed()))
+                onView(withText(containsString("没有找到可接收此授权链接的 App"))).inRoot(isDialog()).check(matches(isDisplayed()))
                 return
             } catch (e: AssertionError) {
                 if (SystemClock.elapsedRealtime() > until) throw e
@@ -87,18 +76,18 @@ class AuthUiTest {
     @Throws(Exception::class)
     fun missingAppHasUsableFallbackAndClosingCancels() {
         val cancelled = CountDownLatch(1)
-        ActivityScenario.launch(SettingActivity::class.java).use { activity ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { activity ->
             show(activity, ConfigAuthProvider.QUARK, { action, _ ->
                 if (action == "loginStart") return@show JSONObject().put("code", 0).put("taskId", "fixture").put("qrUrl", "https://su.quark.cn/fixture")
                 if (action == "loginCancel") cancelled.countDown()
                 JSONObject().put("status", "waiting")
             }, { fail("Opening a sheet is not authorization") })
             waitForFallback()
-            onView(withText("在浏览器继续授权")).check(matches(isDisplayed()))
-            onView(withText("粘贴 Cookie")).check(matches(isDisplayed()))
+            onView(withText("在浏览器继续授权")).inRoot(isDialog()).check(matches(isDisplayed()))
+            onView(withText("粘贴 Cookie")).inRoot(isDialog()).check(matches(isDisplayed()))
             onView(withText("网页登录")).check(doesNotExist())
             screenshot("native-auth-fallback.png")
-            onView(withContentDescription("关闭弹窗")).perform(click())
+            onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
             assertTrue(cancelled.await(3, TimeUnit.SECONDS))
         }
     }
@@ -108,7 +97,7 @@ class AuthUiTest {
     fun manualSaveRequiresInputAndOnlyRefreshesAfterBackendAccepts() {
         val writes = AtomicInteger()
         val refreshed = CountDownLatch(1)
-        ActivityScenario.launch(SettingActivity::class.java).use { activity ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { activity ->
             show(activity, ConfigAuthProvider.BAIDU, { action, fields ->
                 if (action == "loginStart") return@show JSONObject().put("code", 0).put("taskId", "fixture").put("qrUrl", "https://wappass.baidu.com/fixture")
                 if (action == "setBaiduCookie") {
@@ -119,8 +108,8 @@ class AuthUiTest {
                 JSONObject().put("status", "waiting")
             }, { refreshed.countDown() })
             waitForFallback()
-            onView(withText("网页登录")).check(matches(isDisplayed()))
-            onView(withText("粘贴 Cookie")).perform(click())
+            onView(withText("网页登录")).inRoot(isDialog()).check(matches(isDisplayed()))
+            onView(withText("粘贴 Cookie")).inRoot(isDialog()).perform(click())
             onView(withText("保存登录信息")).inRoot(isDialog()).perform(scrollTo(), click())
             assertEquals(0, writes.get())
             assertEquals(1, refreshed.count)

@@ -12,7 +12,7 @@ import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.core.widget.NestedScrollView
-import androidx.test.core.app.ActivityScenario
+import com.fbox.mobile.ScreenScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.base.DefaultFailureHandler
@@ -20,12 +20,12 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.viewpager.widget.ViewPager
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.SourceBean
-import com.github.tvbox.osc.ui.activity.SearchActivity
+import com.github.tvbox.osc.ui.activity.SearchScreen
 import com.github.tvbox.osc.ui.dialog.SearchCheckboxDialog
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.SearchHelper
 import com.orhanobut.hawk.Hawk
-import com.github.tvbox.osc.ui.activity.PushActivity
+import com.github.tvbox.osc.ui.activity.PushScreen
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter
 import com.github.tvbox.osc.ui.compose.ComposeLayouts
 import com.github.tvbox.osc.ui.dialog.AboutDialog
@@ -64,7 +64,7 @@ class ComposeInteropBehaviorTest {
 
     @Test
     fun viewBindingsExistBeforeFirstComposition() {
-        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+        ScreenScenario.launch(PushScreen::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 assertTrue(ComponentDialog::class.java.isAssignableFrom(BaseDialog::class.java))
                 val home = ComposeLayouts.createActivityLayout(activity, R.layout.activity_home)!!
@@ -80,7 +80,7 @@ class ComposeInteropBehaviorTest {
 
     @Test
     fun composeAboutSheetHasBoundedHeightInsideNativeDialog() {
-        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+        ScreenScenario.launch(PushScreen::class.java).use { scenario ->
             val shown = AtomicReference<AboutDialog>()
             scenario.onActivity { activity ->
                 shown.set(AboutDialog(activity).apply { show() })
@@ -103,7 +103,7 @@ class ComposeInteropBehaviorTest {
         val previousRuntime = SearchHelper.getSourcesForSearch()
         Hawk.put(HawkConfig.API_URL, "https://compose-checkbox.invalid/config")
         try {
-            ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+            ScreenScenario.launch(PushScreen::class.java).use { scenario ->
                 val first = SourceBean().apply { key = "scope-one"; name = "测试源一" }
                 val second = SourceBean().apply { key = "scope-two"; name = "测试源二" }
                 val third = SourceBean().apply { key = "scope-three"; name = "测试源三" }
@@ -136,13 +136,13 @@ class ComposeInteropBehaviorTest {
             else Hawk.delete(HawkConfig.API_URL)
             if (previousPreferences == null) Hawk.delete(HawkConfig.SOURCES_FOR_SEARCH)
             else Hawk.put(HawkConfig.SOURCES_FOR_SEARCH, previousPreferences)
-            SearchActivity.setCheckedSourcesForSearch(previousRuntime)
+            SearchScreen.setCheckedSourcesForSearch(previousRuntime)
         }
     }
 
     @Test
     fun composeHistoryAcceptsLateDataAndPreservesSelectionAfterDeletingEarlierRow() {
-        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+        ScreenScenario.launch(PushScreen::class.java).use { scenario ->
             val shown = AtomicReference<ApiHistoryDialog>()
             val selected = AtomicReference<String>()
             val deleted = AtomicReference<List<String>>()

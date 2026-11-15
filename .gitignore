@@ -3,8 +3,12 @@
 **/build/
 local.properties
 *.apk
+!releases/*.apk
 *.jks
 *.keystore
+*.p12
+*.pfx
+*.pass
 release-signing.properties
 **/proguardMapping.txt
 
@@ -14,3 +18,4 @@ release-signing.properties
 *.log
 __pycache__/
 .reference/
+.agents/

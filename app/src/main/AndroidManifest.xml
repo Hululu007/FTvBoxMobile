@@ -34,50 +34,16 @@
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name=".ui.activity.HomeActivity"
+            android:name=".ui.activity.MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="stateHidden|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name="com.fbox.mobile.auth.ConfigWebLoginActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.LivePlayActivity"
-            android:screenOrientation="sensorLandscape" />
-        <activity
-            android:name=".ui.activity.DetailActivity"
-            android:configChanges="orientation|screenSize"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.PushActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.SearchActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.FastSearchActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.SettingActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.HistoryActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.CollectActivity"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.activity.LocalFileActivity"
-            android:screenOrientation="portrait" />
 
         <service
             android:name=".dlna.DLNACastService"

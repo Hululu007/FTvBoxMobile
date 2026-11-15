@@ -1,6 +1,6 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.app.Activity
+import com.github.tvbox.osc.base.findScreenController
 import android.view.View
 import android.widget.TextView
 import com.chad.library.adapter.base.BaseQuickAdapter
@@ -17,7 +17,7 @@ class SeriesFlagAdapter : BaseQuickAdapter<VodInfo.VodSeriesFlag, BaseViewHolder
         select.visibility = if (item.selected) View.VISIBLE else View.GONE
         helper.setText(R.id.tvSeriesFlag, item.name ?: "")
 
-        val activity = helper.itemView.context as? Activity
+        val activity = helper.itemView.context.findScreenController()
         val mSeriesGroupTv = activity?.findViewById<View>(R.id.mSeriesGroupTv)
         val mGridViewQuality = activity?.findViewById<View>(R.id.mGridViewQuality)
 

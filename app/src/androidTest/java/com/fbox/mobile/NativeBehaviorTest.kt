@@ -25,7 +25,7 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.test.core.app.ActivityScenario
+import com.fbox.mobile.ScreenScenario
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.base.DefaultFailureHandler
@@ -67,21 +67,21 @@ import com.github.tvbox.osc.bean.LivePlayerManager
 import com.github.tvbox.osc.bean.MovieSort
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.cache.RoomDataManger
-import com.github.tvbox.osc.ui.activity.CollectActivity
-import com.github.tvbox.osc.ui.activity.DetailActivity
-import com.github.tvbox.osc.ui.activity.FastSearchActivity
-import com.github.tvbox.osc.ui.activity.HomeActivity
-import com.github.tvbox.osc.ui.activity.HistoryActivity
-import com.github.tvbox.osc.ui.activity.LivePlayActivity
-import com.github.tvbox.osc.ui.activity.LocalFileActivity
-import com.github.tvbox.osc.ui.activity.PushActivity
-import com.github.tvbox.osc.ui.activity.SearchActivity
-import com.github.tvbox.osc.ui.activity.SettingActivity
+import com.github.tvbox.osc.ui.activity.CollectionScreen
+import com.github.tvbox.osc.ui.activity.DetailScreen
+import com.github.tvbox.osc.ui.activity.FastSearchScreen
+import com.github.tvbox.osc.ui.activity.HomeScreen
+import com.github.tvbox.osc.ui.activity.HistoryScreen
+import com.github.tvbox.osc.ui.activity.LiveScreen
+import com.github.tvbox.osc.ui.activity.LocalFileScreen
+import com.github.tvbox.osc.ui.activity.PushScreen
+import com.github.tvbox.osc.ui.activity.SearchScreen
+import com.github.tvbox.osc.ui.activity.SettingsScreen
 import com.github.tvbox.osc.ui.dialog.ApiDialog
 import com.github.tvbox.osc.ui.dialog.BaseDialog
 import com.github.tvbox.osc.ui.dialog.EpisodeDialog
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog
-import com.github.tvbox.osc.ui.fragment.UserFragment
+import com.github.tvbox.osc.ui.section.HomeSection
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper
 import com.github.tvbox.osc.util.M3u8
@@ -249,27 +249,27 @@ class NativeBehaviorTest {
         val s = server!!
         val clear = ApiConfig::class.java.getDeclaredMethod("resetConfigData").apply { isAccessible = true }
         InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
-        val detailIntent = Intent(context, DetailActivity::class.java)
+        val detailIntent = Intent(context, DetailScreen::class.java)
             .putExtra("id", s.itemId()).putExtra("sourceKey", "phone-fixture")
             .putExtra("title", "手机播放测试")
         try {
-            ActivityScenario.launch<DetailActivity>(detailIntent).use { detail ->
+            ScreenScenario.launch<DetailScreen>(detailIntent).use { detail ->
                 await(BooleanSupplier {
                     val ready = booleanArrayOf(false)
                     detail.onActivity { activity ->
-                        ready[0] = activity.findViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
+                        ready[0] = activity.requireViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
                     }
                     ready[0]
                 })
                 assertNotNull(ApiConfig.get().getSource("phone-fixture"))
             }
             InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
-            val searchIntent = Intent(context, FastSearchActivity::class.java).putExtra("title", "手机播放测试")
-            ActivityScenario.launch<FastSearchActivity>(searchIntent).use { search ->
+            val searchIntent = Intent(context, FastSearchScreen::class.java).putExtra("title", "手机播放测试")
+            ScreenScenario.launch<FastSearchScreen>(searchIntent).use { search ->
                 await(BooleanSupplier {
                     val ready = booleanArrayOf(false)
                     search.onActivity { activity ->
-                        val grid = activity.findViewById<RecyclerView>(R.id.mGridView)
+                        val grid = activity.requireViewById<RecyclerView>(R.id.mGridView)
                         ready[0] = grid?.adapter?.itemCount?.let { it > 0 } == true
                     }
                     ready[0]
@@ -297,17 +297,18 @@ class NativeBehaviorTest {
         RoomDataManger.insertVodRecord("phone-fixture", record)
         val clear = ApiConfig::class.java.getDeclaredMethod("resetConfigData").apply { isAccessible = true }
         InstrumentationRegistry.getInstrumentation().runOnMainSync { clear.invoke(ApiConfig.get()) }
-        val resumed = AtomicReference<DetailActivity>()
+        val resumed = AtomicReference<DetailScreen>()
         try {
-            ActivityScenario.launch(HistoryActivity::class.java).use {
+            ScreenScenario.launch(HistoryScreen::class.java).use {
                 onView(withText("恢复历史测试")).perform(click())
                 await(BooleanSupplier {
                     val ready = booleanArrayOf(false)
                     InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                        for (activity in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
-                            if (activity is DetailActivity) {
+                        for (host in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                            val activity = (host as? com.github.tvbox.osc.ui.activity.MainActivity)?.currentScreen ?: continue
+                            if (activity is DetailScreen) {
                                 resumed.set(activity)
-                                ready[0] = activity.findViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
+                                ready[0] = activity.requireViewById<VideoView<*>>(R.id.mVideoView)?.getDuration()?.let { it > 0 } == true
                             }
                         }
                     }
@@ -317,7 +318,7 @@ class NativeBehaviorTest {
                     val info = RoomDataManger.getVodInfo("phone-fixture", s.itemId())!!
                     assertEquals("direct", info.playFlag)
                     assertEquals(1, info.playIndex)
-                    val title = resumed.get().findViewById<TextView>(R.id.tv_info_name1).text.toString()
+                    val title = resumed.get().requireViewById<TextView>(R.id.tv_info_name1).text.toString()
                     assertTrue("The player resumed the wrong episode: $title", title.contains("第2集"))
                 }
             }
@@ -344,34 +345,34 @@ class NativeBehaviorTest {
         Hawk.put(HawkConfig.SHOW_PREVIEW, true)
         RoomDataManger.insertVodRecord("phone-fixture", record)
         try {
-            val intent = Intent(context, DetailActivity::class.java)
+            val intent = Intent(context, DetailScreen::class.java)
                 .putExtra("id", s.itemId()).putExtra("sourceKey", "phone-fixture")
                 .putExtra("title", "混合集名续播测试")
-            ActivityScenario.launch<DetailActivity>(intent).use { detail ->
+            ScreenScenario.launch<DetailScreen>(intent).use { detail ->
                 await(BooleanSupplier {
                     val prepared = booleanArrayOf(false)
                     detail.onActivity { activity ->
-                        val player = activity.findViewById<VideoView<*>>(R.id.mVideoView)
+                        val player = activity.requireViewById<VideoView<*>>(R.id.mVideoView)
                         prepared[0] = player?.getDuration()?.let { it > 0 } == true
                         if (prepared[0]) player.pause()
                     }
                     prepared[0]
                 })
                 detail.onActivity { activity ->
-                    val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                    val list = activity.requireViewById<RecyclerView>(R.id.mGridView)
                     val adapter = list.adapter as BaseQuickAdapter<*, *>
                     assertEquals(expected, adapter.data.map { (it as VodInfo.VodSeries).name })
                     val saved = RoomDataManger.getVodInfo("phone-fixture", s.itemId())!!
                     assertEquals(9, saved.playIndex)
                     assertEquals("普通话版(10)", saved.playNote)
-                    val title = activity.findViewById<TextView>(R.id.tv_info_name1).text.toString()
+                    val title = activity.requireViewById<TextView>(R.id.tv_info_name1).text.toString()
                     assertTrue("History resumed a different video: $title", title.contains("普通话版(10)"))
                 }
                 onView(withId(R.id.mSeriesSortTv)).perform(scrollTo())
                 screenshot("mixed-episode-order")
                 detail.onActivity { activity ->
-                    activity.findViewById<View>(R.id.mSeriesSortTv).performClick()
-                    val adapter = activity.findViewById<RecyclerView>(R.id.mGridView).adapter as BaseQuickAdapter<*, *>
+                    activity.requireViewById<View>(R.id.mSeriesSortTv).performClick()
+                    val adapter = activity.requireViewById<RecyclerView>(R.id.mGridView).adapter as BaseQuickAdapter<*, *>
                     assertEquals(expected.reversed(), adapter.data.map { (it as VodInfo.VodSeries).name })
                     assertEquals("普通话版(10)", (adapter.data[35] as VodInfo.VodSeries).name)
                     assertTrue("Reversing the list must keep episode 10 selected; selected=" +
@@ -398,7 +399,7 @@ class NativeBehaviorTest {
         val position = longArrayOf(42_000)
         val duration = longArrayOf(100_000)
         val controller = AtomicReference<com.github.tvbox.osc.player.controller.VodController>()
-        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+        ScreenScenario.launch(PushScreen::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val player = object : xyz.doikki.videoplayer.controller.MediaPlayerControl by
                     VideoView<xyz.doikki.videoplayer.player.AbstractPlayer>(activity) {
@@ -454,7 +455,7 @@ class NativeBehaviorTest {
 
     @Test
     fun playbackMenuKeepsButtonsAlignedWithoutClipping() {
-        ActivityScenario.launch(PushActivity::class.java).use { scenario ->
+        ScreenScenario.launch(PushScreen::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val root = LayoutInflater.from(activity).inflate(R.layout.player_vod_control_view, null)
                 var previousClicks = 0
@@ -520,23 +521,23 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun homeAndSettingsFitPortraitAndKeepConfigurationControls() {
-        ActivityScenario.launch(HomeActivity::class.java).use { home ->
+        ScreenScenario.launch(HomeScreen::class.java).use { home ->
             await(BooleanSupplier { ApiConfig.get().getHomeSourceBean() != null })
             SystemClock.sleep(1000)
             home.onActivity { activity ->
                 assertEquals(Configuration.ORIENTATION_PORTRAIT, activity.resources.configuration.orientation)
-                assertNotNull(activity.findViewById(R.id.mViewPager))
-                assertTrue(activity.findViewById<View>(R.id.tvName).width > 0)
+                assertNotNull(activity.requireViewById(R.id.mViewPager))
+                assertTrue(activity.requireViewById<View>(R.id.tvName).width > 0)
             }
             screenshot("home")
         }
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             SystemClock.sleep(500)
             settings.onActivity { activity ->
-                val api = activity.findViewById<View>(R.id.llApi)
+                val api = activity.requireViewById<View>(R.id.llApi)
                 assertNotNull(api)
                 assertTrue(api.width <= activity.window.decorView.width)
-                assertNotNull(activity.findViewById(R.id.llApiHistory))
+                assertNotNull(activity.requireViewById(R.id.llApiHistory))
             }
             screenshot("settings")
         }
@@ -545,21 +546,21 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun categorySelectionFollowsTapAndSwipe() {
-        ActivityScenario.launch(HomeActivity::class.java).use { home ->
+        ScreenScenario.launch(HomeScreen::class.java).use { home ->
             await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
             onView(withText("电影")).perform(click())
             home.onActivity { activity ->
-                val pager = activity.findViewById<ViewPager>(R.id.mViewPager)
+                val pager = activity.requireViewById<ViewPager>(R.id.mViewPager)
                 assertEquals(1, pager.currentItem)
-                val tabs = activity.findViewById<RecyclerView>(R.id.mGridView)
+                val tabs = activity.requireViewById<RecyclerView>(R.id.mGridView)
                 assertTrue(tabs.findViewHolderForAdapterPosition(1)!!.itemView.isSelected)
             }
             screenshot("category")
             onView(withId(R.id.mViewPager)).perform(onVisibleView(swipeRight()))
             home.onActivity { activity ->
-                val pager = activity.findViewById<ViewPager>(R.id.mViewPager)
+                val pager = activity.requireViewById<ViewPager>(R.id.mViewPager)
                 assertEquals(0, pager.currentItem)
-                val tabs = activity.findViewById<RecyclerView>(R.id.mGridView)
+                val tabs = activity.requireViewById<RecyclerView>(R.id.mGridView)
                 assertTrue(tabs.findViewHolderForAdapterPosition(0)!!.itemView.isSelected)
             }
         }
@@ -570,7 +571,7 @@ class NativeBehaviorTest {
     fun homeHeaderFoldsAndRevealsWithVerticalContentScroll() {
         for (grid in booleanArrayOf(true, false)) {
             Hawk.put(HawkConfig.HOME_REC_STYLE, grid)
-            ActivityScenario.launch(HomeActivity::class.java).use { home ->
+            ScreenScenario.launch(HomeScreen::class.java).use { home ->
                 await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
                 home.onActivity {
                     val videos = ArrayList<Movie.Video>()
@@ -582,28 +583,28 @@ class NativeBehaviorTest {
                         video.sourceKey = "phone-fixture"
                         videos.add(video)
                     }
-                    UserFragment.homeHotVodAdapter?.setNewData(videos)
+                    HomeSection.homeHotVodAdapter?.setNewData(videos)
                 }
                 val sourcePosition = IntArray(2)
-                home.onActivity { activity -> activity.findViewById<View>(R.id.tvName).getLocationOnScreen(sourcePosition) }
+                home.onActivity { activity -> activity.requireViewById<View>(R.id.tvName).getLocationOnScreen(sourcePosition) }
                 onView(withId(R.id.tvHotList)).perform(swipeVisible(true, Swipe.FAST))
                 onView(withId(R.id.tvHotList)).perform(swipeVisible(true, Swipe.FAST))
                 home.onActivity { activity ->
-                    val shortcuts = activity.findViewById<View>(R.id.mobileHomeActionsClip)
+                    val shortcuts = activity.requireViewById<View>(R.id.mobileHomeActionsClip)
                     assertFalse("Shortcut row must fold out of the viewport", shortcuts.getGlobalVisibleRect(Rect()))
-                    val categories = activity.findViewById<View>(R.id.mGridView)
+                    val categories = activity.requireViewById<View>(R.id.mGridView)
                     assertFalse("Category row must fold out of the viewport", categories.getGlobalVisibleRect(Rect()))
-                    val pager = activity.findViewById<View>(R.id.mViewPager)
+                    val pager = activity.requireViewById<View>(R.id.mViewPager)
                     assertEquals("Collapsed content fills the space below the source", 0, pager.top)
                     val current = IntArray(2)
-                    activity.findViewById<View>(R.id.tvName).getLocationOnScreen(current)
+                    activity.requireViewById<View>(R.id.tvName).getLocationOnScreen(current)
                     assertArrayEquals("Source switch stays pinned", sourcePosition, current)
                 }
                 screenshot(if (grid) "home-folded-grid" else "home-folded-list")
                 onView(withId(R.id.tvHotList)).perform(swipeVisible(false, Swipe.FAST))
                 home.onActivity { activity ->
-                    assertTrue(activity.findViewById<View>(R.id.mobileHomeActionsClip).height > 0)
-                    assertTrue((activity.findViewById<View>(R.id.mGridView).parent as View).height > 0)
+                    assertTrue(activity.requireViewById<View>(R.id.mobileHomeActionsClip).height > 0)
+                    assertTrue((activity.requireViewById<View>(R.id.mGridView).parent as View).height > 0)
                 }
                 onView(withId(R.id.tvHistory)).check(matches(isDisplayed()))
                 screenshot(if (grid) "home-revealed-grid" else "home-revealed-list")
@@ -616,7 +617,7 @@ class NativeBehaviorTest {
     fun homeFoldGestureKeepsTheListViewportStable() {
         for (grid in booleanArrayOf(true, false)) {
             Hawk.put(HawkConfig.HOME_REC_STYLE, grid)
-            ActivityScenario.launch(HomeActivity::class.java).use { home ->
+            ScreenScenario.launch(HomeScreen::class.java).use { home ->
                 await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
                 home.onActivity {
                     val catalog = ArrayList<Movie.Video>()
@@ -626,23 +627,23 @@ class NativeBehaviorTest {
                         item.name = "稳定滚动 $i"
                         catalog.add(item)
                     }
-                    UserFragment.homeHotVodAdapter?.setNewData(catalog)
+                    HomeSection.homeHotVodAdapter?.setNewData(catalog)
                 }
                 SystemClock.sleep(700)
                 val measuredHeight = intArrayOf(0)
                 val resizedFrames = intArrayOf(0)
                 val frames = intArrayOf(0)
                 val listener = ViewTreeObserver.OnPreDrawListener {
-                    val height = UserFragment.tvHotList?.measuredHeight ?: 0
+                    val height = HomeSection.tvHotList?.measuredHeight ?: 0
                     if (measuredHeight[0] != 0 && height != measuredHeight[0]) resizedFrames[0]++
                     measuredHeight[0] = height
                     frames[0]++
                     true
                 }
-                home.onActivity { UserFragment.tvHotList?.viewTreeObserver?.addOnPreDrawListener(listener) }
+                home.onActivity { HomeSection.tvHotList?.viewTreeObserver?.addOnPreDrawListener(listener) }
                 onView(withId(R.id.tvHotList)).perform(swipeVisible(true))
                 onView(withId(R.id.tvHotList)).perform(swipeVisible(false))
-                home.onActivity { UserFragment.tvHotList?.viewTreeObserver?.removeOnPreDrawListener(listener) }
+                home.onActivity { HomeSection.tvHotList?.viewTreeObserver?.removeOnPreDrawListener(listener) }
                 assertTrue("The gesture must render several frames", frames[0] > 3)
                 assertEquals("Folding must not repeatedly resize the list and move touch coordinates", 0, resizedFrames[0])
                 screenshot(if (grid) "home-stable-grid" else "home-stable-list")
@@ -696,7 +697,7 @@ class NativeBehaviorTest {
         try {
             for (aggregate in booleanArrayOf(true, false)) {
                 Hawk.put(HawkConfig.FAST_SEARCH_MODE, aggregate)
-                ActivityScenario.launch(SearchActivity::class.java).use { search ->
+                ScreenScenario.launch(SearchScreen::class.java).use { search ->
                     onView(withText("搜索历史条目 0")).check(matches(isDisplayed()))
                     onView(withId(R.id.tvClear)).check(matches(not(isDisplayed())))
                     onView(withId(R.id.etSearch)).perform(replaceText("手机播放测试"), closeSoftKeyboard())
@@ -705,19 +706,19 @@ class NativeBehaviorTest {
                     await(BooleanSupplier {
                         val loaded = booleanArrayOf(false)
                         search.onActivity { activity ->
-                            val hot = activity.findViewById<RecyclerView>(R.id.mGridViewWord)
+                            val hot = activity.requireViewById<RecyclerView>(R.id.mGridViewWord)
                             loaded[0] = (hot.adapter?.itemCount ?: 0) > 0
                         }
                         loaded[0]
                     })
                     search.onActivity { activity ->
-                        val scroll = activity.findViewById<NestedScrollView>(R.id.mobileSearchSuggestions)
+                        val scroll = activity.requireViewById<NestedScrollView>(R.id.mobileSearchSuggestions)
                         assertTrue(scroll.height > activity.window.decorView.height / 2)
                         scroll.fullScroll(View.FOCUS_DOWN)
                     }
                     SystemClock.sleep(400)
                     search.onActivity { activity ->
-                        val hot = activity.findViewById<RecyclerView>(R.id.mGridViewWord)
+                        val hot = activity.requireViewById<RecyclerView>(R.id.mGridViewWord)
                         val last = hot.findViewHolderForAdapterPosition(hot.adapter!!.itemCount - 1)
                         assertNotNull(last)
                         val visible = Rect()
@@ -727,7 +728,7 @@ class NativeBehaviorTest {
                     screenshot(if (aggregate) "search-scroll-aggregate" else "search-scroll-normal")
                     onView(withId(R.id.mobileSearchSuggestions)).perform(swipeDown())
                     search.onActivity { activity ->
-                        activity.findViewById<NestedScrollView>(R.id.mobileSearchSuggestions).scrollTo(0, 0)
+                        activity.requireViewById<NestedScrollView>(R.id.mobileSearchSuggestions).scrollTo(0, 0)
                     }
                     SystemClock.sleep(500) // Let the previous swipe finish before tapping the history button.
                     onView(withId(R.id.tvHistoryClear)).perform(scrollTo(), click())
@@ -745,12 +746,12 @@ class NativeBehaviorTest {
     @Throws(Exception::class)
     fun normalSearchResultsReplaceSuggestionsAndBackRestoresHistory() {
         Hawk.put(HawkConfig.FAST_SEARCH_MODE, false)
-        ActivityScenario.launch(SearchActivity::class.java).use { search ->
+        ScreenScenario.launch(SearchScreen::class.java).use { search ->
             onView(withId(R.id.etSearch)).perform(replaceText("手机播放测试"), pressImeActionButton())
             await(BooleanSupplier {
                 val loaded = booleanArrayOf(false)
                 search.onActivity { activity ->
-                    val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                    val list = activity.requireViewById<RecyclerView>(R.id.mGridView)
                     loaded[0] = list.isShown && (list.adapter?.itemCount ?: 0) > 0
                 }
                 loaded[0]
@@ -768,15 +769,15 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun homeLayoutSettingKeepsBothModesVerticallyScrollable() {
-        ActivityScenario.launch(HomeActivity::class.java).use { home ->
+        ScreenScenario.launch(HomeScreen::class.java).use { home ->
             await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
             for (mode in arrayOf("单列列表", "多列海报")) {
-                home.onActivity { activity -> activity.startActivity(Intent(activity, SettingActivity::class.java)) }
+                home.onActivity { activity -> activity.startActivity(Intent(activity, SettingsScreen::class.java)) }
                 await(BooleanSupplier {
                     val resumed = booleanArrayOf(false)
                     InstrumentationRegistry.getInstrumentation().runOnMainSync {
                         resumed[0] = ActivityLifecycleMonitorRegistry.getInstance()
-                            .getActivitiesInStage(Stage.RESUMED).any { it is SettingActivity && it.hasWindowFocus() }
+                            .getActivitiesInStage(Stage.RESUMED).mapNotNull { (it as? com.github.tvbox.osc.ui.activity.MainActivity)?.currentScreen }.any { it is SettingsScreen && it.hasWindowFocus() }
                     }
                     resumed[0]
                 })
@@ -797,8 +798,8 @@ class NativeBehaviorTest {
                     catalog.add(item)
                 }
                 home.onActivity { activity ->
-                    UserFragment.homeHotVodAdapter?.setNewData(catalog)
-                    val list = activity.findViewById<RecyclerView>(R.id.tvHotList)
+                    HomeSection.homeHotVodAdapter?.setNewData(catalog)
+                    val list = activity.requireViewById<RecyclerView>(R.id.tvHotList)
                     val manager = list.layoutManager as GridLayoutManager
                     assertEquals(if ("单列列表" == mode) 1 else 3, manager.spanCount)
                     assertTrue(manager.canScrollVertically())
@@ -818,7 +819,7 @@ class NativeBehaviorTest {
     fun phoneConfigurationPasteKeepsSeparateVodAndLiveAddresses() {
         val saved = AtomicReference<String>()
         val s = server!!
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             settings.onActivity { activity ->
                 val dialog = ApiDialog(activity)
                 dialog.setOnListener(object : ApiDialog.OnListener {
@@ -851,10 +852,10 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun linkPlaybackAcceptsPastedPhoneInput() {
-        val playbackActivity = AtomicReference<Activity>()
+        val playbackActivity = AtomicReference<com.github.tvbox.osc.base.ScreenController>()
         val s = server!!
         try {
-            ActivityScenario.launch(PushActivity::class.java).use { push ->
+            ScreenScenario.launch(PushScreen::class.java).use { push ->
                 push.onActivity { activity ->
                     val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("video", s.base() + "/video.mp4"))
@@ -865,10 +866,11 @@ class NativeBehaviorTest {
                 await(BooleanSupplier {
                     val ready = booleanArrayOf(false)
                     InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                        for (activity in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
-                            if (activity is DetailActivity) {
+                        for (host in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                            val activity = (host as? com.github.tvbox.osc.ui.activity.MainActivity)?.currentScreen ?: continue
+                            if (activity is DetailScreen) {
                                 playbackActivity.set(activity)
-                                val player = activity.findViewById<VideoView<*>>(R.id.mVideoView)
+                                val player = activity.requireViewById<VideoView<*>>(R.id.mVideoView)
                                 ready[0] = player != null && player.getDuration() > 0
                             }
                         }
@@ -887,7 +889,7 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun configurationSheetSupportsPhoneKeyboard() {
-        ActivityScenario.launch(SettingActivity::class.java).use {
+        ScreenScenario.launch(SettingsScreen::class.java).use {
             onView(withId(R.id.llApi)).perform(click())
             onView(withId(R.id.input)).inRoot(isDialog()).check { view, error ->
                 if (error != null) throw error
@@ -918,14 +920,25 @@ class NativeBehaviorTest {
         }
         val uri: Uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", video)
         try {
-            ActivityScenario.launch<DetailActivity>(LocalVideos.intent(context, uri)).use { detail ->
+            ScreenScenario.launch<DetailScreen>(LocalVideos.intent(context, uri)).use { detail ->
                 await(BooleanSupplier {
                     val prepared = booleanArrayOf(false)
                     detail.onActivity { activity ->
-                        val player = activity.findViewById<VideoView<*>>(R.id.mVideoView)
+                        val player = activity.requireViewById<VideoView<*>>(R.id.mVideoView)
                         prepared[0] = player != null && player.getDuration() > 0 && player.getCurrentPosition() > 0
                     }
                     prepared[0]
+                })
+                detail.moveToState(Lifecycle.State.CREATED)
+                detail.onActivity { activity ->
+                    assertFalse("Video must pause while the host is in the background",
+                        activity.requireViewById<VideoView<*>>(R.id.mVideoView).isPlaying())
+                }
+                detail.moveToState(Lifecycle.State.RESUMED)
+                await(BooleanSupplier {
+                    var playing = false
+                    detail.onActivity { playing = it.requireViewById<VideoView<*>>(R.id.mVideoView).isPlaying() }
+                    playing
                 })
                 assertEquals(0, s.videoRequests)
                 screenshot("local-video")
@@ -938,14 +951,14 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun phoneSearchUsesSystemInputAndFavoritesRemainAvailable() {
-        ActivityScenario.launch(SearchActivity::class.java).use { search ->
+        ScreenScenario.launch(SearchScreen::class.java).use { search ->
             SystemClock.sleep(500)
             search.onActivity { activity ->
-                val input = activity.findViewById<EditText>(R.id.etSearch)
+                val input = activity.requireViewById<EditText>(R.id.etSearch)
                 assertTrue(input.showSoftInputOnFocus)
-                assertEquals(View.GONE, activity.findViewById<View>(R.id.keyBoardRoot).visibility)
+                assertEquals(View.GONE, activity.requireViewById<View>(R.id.keyBoardRoot).visibility)
                 input.setText("手机播放测试")
-                assertNotNull(activity.findViewById(R.id.tvSearchCheckboxBtn))
+                assertNotNull(activity.requireViewById(R.id.tvSearchCheckboxBtn))
             }
             screenshot("search")
         }
@@ -956,9 +969,9 @@ class NativeBehaviorTest {
         vod.pic = ""
         RoomDataManger.insertVodCollect(vod.sourceKey, vod)
         try {
-            ActivityScenario.launch(CollectActivity::class.java).use { collect ->
+            ScreenScenario.launch(CollectionScreen::class.java).use { collect ->
                 SystemClock.sleep(500)
-                collect.onActivity { activity -> assertNotNull(activity.findViewById(R.id.mGridView)) }
+                collect.onActivity { activity -> assertNotNull(activity.requireViewById(R.id.mGridView)) }
                 screenshot("favorites")
             }
         } finally {
@@ -971,19 +984,19 @@ class NativeBehaviorTest {
     fun aggregatedSearchHonorsListAndPosterPreferences() {
         for (mode in intArrayOf(0, 1)) {
             Hawk.put(HawkConfig.SEARCH_VIEW, mode)
-            val intent = Intent(context, FastSearchActivity::class.java).putExtra("title", "手机播放测试")
-            ActivityScenario.launch<FastSearchActivity>(intent).use { search ->
+            val intent = Intent(context, FastSearchScreen::class.java).putExtra("title", "手机播放测试")
+            ScreenScenario.launch<FastSearchScreen>(intent).use { search ->
                 await(BooleanSupplier {
                     val loaded = booleanArrayOf(false)
                     search.onActivity { activity ->
-                        val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                        val list = activity.requireViewById<RecyclerView>(R.id.mGridView)
                         loaded[0] = (list.adapter?.itemCount ?: 0) > 0
                     }
                     loaded[0]
                 })
                 search.onActivity { activity ->
                     for (id in intArrayOf(R.id.mGridView, R.id.mGridViewFilter)) {
-                        val list = activity.findViewById<RecyclerView>(id)
+                        val list = activity.requireViewById<RecyclerView>(id)
                         val manager = list.layoutManager as GridLayoutManager
                         assertEquals(if (mode == 0) 1 else 3, manager.spanCount)
                         assertTrue(manager.canScrollVertically())
@@ -991,9 +1004,9 @@ class NativeBehaviorTest {
                     }
                 }
                 search.onActivity { activity ->
-                    val sources = activity.findViewById<RecyclerView>(R.id.mGridViewWord)
+                    val sources = activity.requireViewById<RecyclerView>(R.id.mGridViewWord)
                     assertTrue("Source chips must leave room for other sources", sources.getChildAt(0).width < sources.width * .75f)
-                    assertNotNull(activity.findViewById(R.id.mobileSearchBack))
+                    assertNotNull(activity.requireViewById(R.id.mobileSearchBack))
                 }
                 screenshot(if (mode == 0) "search-results-list" else "search-results-posters")
             }
@@ -1004,14 +1017,14 @@ class NativeBehaviorTest {
     @Throws(Exception::class)
     fun nativePlayerExtractsVideoFromHtmlAndDecodesIt() {
         val s = server!!
-        val intent = Intent(context, DetailActivity::class.java)
+        val intent = Intent(context, DetailScreen::class.java)
             .putExtra("id", s.itemId())
             .putExtra("sourceKey", "phone-fixture")
             .putExtra("title", "手机播放测试")
-        ActivityScenario.launch<DetailActivity>(intent).use { detail ->
+        ScreenScenario.launch<DetailScreen>(intent).use { detail ->
             val player = AtomicReference<VideoView<*>>()
             await(BooleanSupplier {
-                detail.onActivity { activity -> player.set(activity.findViewById(R.id.mVideoView)) }
+                detail.onActivity { activity -> player.set(activity.requireViewById(R.id.mVideoView)) }
                 player.get() != null
             })
             await(BooleanSupplier {
@@ -1023,7 +1036,7 @@ class NativeBehaviorTest {
                 assertTrue("The native parser did not request the video", s.videoRequests > 0)
             }
             screenshot("detail")
-            detail.onActivity { activity -> activity.findViewById<View>(R.id.tvPlay).performClick() }
+            detail.onActivity { activity -> activity.requireViewById<View>(R.id.tvPlay).performClick() }
             await(BooleanSupplier {
                 val landscape = booleanArrayOf(false)
                 detail.onActivity { activity -> landscape[0] = activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
@@ -1045,22 +1058,22 @@ class NativeBehaviorTest {
             screenshot("player-episodes")
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
 
-            detail.onActivity { it.findViewById<View>(R.id.danmu_setting).performClick() }
+            detail.onActivity { it.requireViewById<View>(R.id.danmu_setting).performClick() }
             onView(withId(R.id.danmuSearch)).inRoot(isDialog()).check(matches(isDisplayed()))
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
-            detail.onActivity { it.findViewById<View>(R.id.danmu_search_ui).performClick() }
+            detail.onActivity { it.requireViewById<View>(R.id.danmu_search_ui).performClick() }
             onView(withId(R.id.input)).inRoot(isDialog()).check(matches(withText("手机播放测试")))
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).perform(click())
-            detail.onActivity { it.findViewById<View>(R.id.play_cast).performClick() }
+            detail.onActivity { it.requireViewById<View>(R.id.play_cast).performClick() }
             onView(withContentDescription("关闭弹窗")).inRoot(isDialog()).check(matches(isDisplayed())).perform(click())
             for ((id, title) in listOf(R.id.play_time_start to "片头", R.id.play_time_end to "片尾")) {
-                detail.onActivity { it.findViewById<View>(id).performClick() }
+                detail.onActivity { it.requireViewById<View>(id).performClick() }
                 SystemClock.sleep(500)
                 onView(withContentDescription("${title}时长（秒）")).inRoot(isDialog()).perform(replaceText("1"))
                 onView(withContentDescription("保存${title}时长")).inRoot(isDialog()).perform(click())
                 detail.onActivity {
-                    assertTrue(it.findViewById<View>(id).contentDescription.toString().contains("00:01"))
-                    it.findViewById<View>(id).performLongClick()
+                    assertTrue(it.requireViewById<View>(id).contentDescription.toString().contains("00:01"))
+                    it.requireViewById<View>(id).performLongClick()
                 }
             }
             detail.onActivity { activity -> activity.onBackPressed() }
@@ -1069,7 +1082,7 @@ class NativeBehaviorTest {
                 detail.onActivity { activity -> portrait[0] = activity.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT }
                 portrait[0]
             })
-            detail.onActivity { activity -> assertTrue(activity.findViewById<View>(R.id.mGridViewFlag).isShown) }
+            detail.onActivity { activity -> assertTrue(activity.requireViewById<View>(R.id.mGridViewFlag).isShown) }
             screenshot("playback-return")
         }
     }
@@ -1077,9 +1090,9 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun selectingSourceRefreshesHomeRecommendations() {
-        ActivityScenario.launch(HomeActivity::class.java).use { home ->
+        ScreenScenario.launch(HomeScreen::class.java).use { home ->
             await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
-            home.onActivity { activity -> activity.findViewById<View>(R.id.tvName).performClick() }
+            home.onActivity { activity -> activity.requireViewById<View>(R.id.tvName).performClick() }
             screenshot("source-dialog")
             onView(withText("第二测试源")).inRoot(isDialog()).perform(click())
             await(BooleanSupplier { homeShows(home, "第二测试源", "第二线路内容") })
@@ -1100,18 +1113,19 @@ class NativeBehaviorTest {
                 )
             )
         )
-        val newHome = AtomicReference<HomeActivity>()
+        val newHome = AtomicReference<HomeScreen>()
         try {
-            ActivityScenario.launch(SettingActivity::class.java).use { settings ->
-                settings.onActivity { activity -> activity.findViewById<View>(R.id.llApiLine).performClick() }
+            ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
+                settings.onActivity { activity -> activity.requireViewById<View>(R.id.llApiLine).performClick() }
                 onView(withText("第二配置")).inRoot(isDialog()).perform(click())
                 await(BooleanSupplier {
                     val ready = booleanArrayOf(false)
                     InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                        for (activity in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
-                            if (activity is HomeActivity) {
+                        for (host in ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                            val activity = (host as? com.github.tvbox.osc.ui.activity.MainActivity)?.currentScreen ?: continue
+                            if (activity is HomeScreen) {
                                 newHome.set(activity)
-                                val adapter = UserFragment.homeHotVodAdapter
+                                val adapter = HomeSection.homeHotVodAdapter
                                 ready[0] = adapter != null && adapter.data.any { vod -> "第二线路内容" == vod.name }
                             }
                         }
@@ -1130,11 +1144,11 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun liveTvLoadsChannelAndDecodesVideo() {
-        ActivityScenario.launch(LivePlayActivity::class.java).use { live ->
+        ScreenScenario.launch(LiveScreen::class.java).use { live ->
             await(BooleanSupplier {
                 val playing = booleanArrayOf(false)
                 live.onActivity { activity ->
-                    val video = activity.findViewById<VideoView<*>>(R.id.mVideoView)
+                    val video = activity.requireViewById<VideoView<*>>(R.id.mVideoView)
                     playing[0] = video != null && video.getDuration() > 0
                 }
                 playing[0]
@@ -1150,11 +1164,11 @@ class NativeBehaviorTest {
         }
     }
 
-    private fun homeShows(home: ActivityScenario<HomeActivity>, source: String, title: String): Boolean {
+    private fun homeShows(home: ScreenScenario<HomeScreen>, source: String, title: String): Boolean {
         val matches = booleanArrayOf(false)
         home.onActivity { activity ->
-            val label = activity.findViewById<TextView>(R.id.tvName)
-            val adapter = UserFragment.homeHotVodAdapter
+            val label = activity.requireViewById<TextView>(R.id.tvName)
+            val adapter = HomeSection.homeHotVodAdapter
             lastHomeStatus = "home label=${label.text}, selected=${ApiConfig.get().getHomeSourceBean()?.name}, " +
                 "recommendation mode=${Hawk.get(HawkConfig.HOME_REC, -1)}, " +
                 "items=${adapter?.data?.size}, first=${adapter?.data?.firstOrNull()?.name}"
@@ -1163,45 +1177,11 @@ class NativeBehaviorTest {
         return matches[0]
     }
 
-    @Test
-    @Throws(Exception::class)
-    fun importsFlutterDataOnceWithoutRemovingOriginals() {
-        val legacy = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-        val migration = context.getSharedPreferences("native_migration", Context.MODE_PRIVATE)
-        val media = "[{\"sourceKey\":\"sub::migration-source\",\"id\":\"old-id\",\"detailId\":\"detail-id\",\"title\":\"迁移测试\"}]"
-        val saved = "VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIGxpc3Qu![\"sub::migration-source::old-id\"]"
-        legacy.edit().putString("flutter.source.current", "sub::migration-source")
-            .putString("flutter.subscriptions", "[{\"id\":\"sub\",\"url\":\"https://example.test/root\",\"selectedUrl\":\"https://example.test/line\"}]")
-            .putString("flutter.library.media", media).putString("flutter.library.history", saved)
-            .putString("flutter.library.favorites", saved).commit()
-        migration.edit().clear().commit()
-        Hawk.delete(HawkConfig.API_URL)
-        try {
-            LegacyFlutterImport.run(context)
-            assertTrue(migration.getBoolean("flutter_imported", false))
-            assertEquals("https://example.test/line", Hawk.get<Any>(HawkConfig.API_URL))
-            assertEquals("migration-source", Hawk.get<Any>(HawkConfig.HOME_API))
-            assertEquals("https://example.test/root", Hawk.get<Any>(HawkConfig.API_LINE_SOURCE))
-            assertEquals("迁移测试", RoomDataManger.getVodInfo("migration-source", "detail-id")?.name)
-            assertTrue(RoomDataManger.isVodCollect("migration-source", "detail-id"))
-            assertEquals(media, legacy.getString("flutter.library.media", ""))
-            Hawk.put(HawkConfig.API_URL, "https://example.test/new-selection")
-            LegacyFlutterImport.run(context)
-            assertEquals("https://example.test/new-selection", Hawk.get<Any>(HawkConfig.API_URL))
-        } finally {
-            val vod = VodInfo()
-            vod.id = "detail-id"
-            RoomDataManger.deleteVodRecord("migration-source", vod)
-            RoomDataManger.deleteVodCollect("migration-source", vod)
-            legacy.edit().clear().commit()
-            HistoryHelper.clearApiLineList()
-        }
-    }
 
     @Test
     @Throws(Exception::class)
     fun phoneDialogsKeepFieldsAndActionsWithinScreen() {
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             val layouts = arrayOf(
                 "dialog_backup", "dialog_search_subtitle", "dialog_remote", "dialog_checkbox_search",
                 "dialog_search_remotetv", "dialog_quick_search", "dialog_tip", "dialog_episode",
@@ -1239,7 +1219,7 @@ class NativeBehaviorTest {
     @Throws(Exception::class)
     fun phoneSheetsKeepLongEpisodeListsAndFiltersUsable() {
         val s = server!!
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             val episodes = ArrayList<VodInfo.VodSeries>()
             for (i in 1..120) episodes.add(VodInfo.VodSeries("第" + i + "集", s.base() + "/video.mp4"))
             val episodeDialog = AtomicReference<EpisodeDialog>()
@@ -1298,14 +1278,14 @@ class NativeBehaviorTest {
         vod.sourceKey = "phone-fixture"
         RoomDataManger.insertVodCollect(vod.sourceKey, vod)
         try {
-            ActivityScenario.launch(CollectActivity::class.java).use { collect ->
-                collect.onActivity { activity -> activity.findViewById<View>(R.id.tvClear).performClick() }
+            ScreenScenario.launch(CollectionScreen::class.java).use { collect ->
+                collect.onActivity { activity -> activity.requireViewById<View>(R.id.tvClear).performClick() }
                 SystemClock.sleep(500) // Wait for the entrance animation before tapping the moving action.
                 onView(withText("取消")).inRoot(isDialog()).perform(click())
                 SystemClock.sleep(500)
                 onView(withContentDescription("关闭弹窗")).check(doesNotExist())
                 assertTrue(RoomDataManger.isVodCollect(vod.sourceKey, vod.id))
-                collect.onActivity { activity -> activity.findViewById<View>(R.id.tvClear).performClick() }
+                collect.onActivity { activity -> activity.requireViewById<View>(R.id.tvClear).performClick() }
                 screenshot("confirm-clear")
                 onView(withContentDescription("下滑关闭弹窗")).inRoot(isDialog()).perform(
                     GeneralSwipeAction(
@@ -1349,12 +1329,12 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun phoneUtilityScreensOpenAndExposeTouchActions() {
-        ActivityScenario.launch(PushActivity::class.java).use { push ->
-            push.onActivity { activity -> assertTrue(activity.findViewById<View>(R.id.pushLocal).hasOnClickListeners()) }
+        ScreenScenario.launch(PushScreen::class.java).use { push ->
+            push.onActivity { activity -> assertTrue(activity.requireViewById<View>(R.id.pushLocal).hasOnClickListeners()) }
             screenshot("push")
         }
-        ActivityScenario.launch(LocalFileActivity::class.java).use { local ->
-            local.onActivity { activity -> assertNotNull(activity.findViewById(R.id.fileList)) }
+        ScreenScenario.launch(LocalFileScreen::class.java).use { local ->
+            local.onActivity { activity -> assertNotNull(activity.requireViewById(R.id.fileList)) }
             screenshot("local-files")
         }
     }
@@ -1362,11 +1342,11 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun searchNavigationUsesTheInputRowWithoutAnotherTitleBar() {
-        ActivityScenario.launch(SearchActivity::class.java).use { search ->
+        ScreenScenario.launch(SearchScreen::class.java).use { search ->
             onView(withId(R.id.mobileSearchBack)).check(matches(isDisplayed()))
             search.onActivity { activity ->
-                val back = activity.findViewById<View>(R.id.mobileSearchBack)
-                val input = activity.findViewById<View>(R.id.etSearch)
+                val back = activity.requireViewById<View>(R.id.mobileSearchBack)
+                val input = activity.requireViewById<View>(R.id.etSearch)
                 val backAt = IntArray(2)
                 val inputAt = IntArray(2)
                 back.getLocationOnScreen(backAt)
@@ -1394,7 +1374,7 @@ class NativeBehaviorTest {
             intArrayOf(R.layout.dialog_cast, R.id.list, R.layout.item_cast_device, R.id.tvDeviceName),
             intArrayOf(R.layout.dialog_checkbox_search, R.id.mGridView, R.layout.item_dialog_checkbox_search, R.id.oneSearchSource)
         )
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             for (spec in cases) {
                 val shown = AtomicReference<BaseDialog>()
                 val name = context.resources.getResourceEntryName(spec[0])
@@ -1460,7 +1440,7 @@ class NativeBehaviorTest {
         }
         category.filters.add(filter)
         category.filterSelect["area"] = "area1"
-        ActivityScenario.launch(SettingActivity::class.java).use { settings ->
+        ScreenScenario.launch(SettingsScreen::class.java).use { settings ->
             val shown = AtomicReference<GridFilterDialog>()
             settings.onActivity { activity ->
                 val dialog = GridFilterDialog(activity)
@@ -1492,16 +1472,16 @@ class NativeBehaviorTest {
         s.episodeCount = 120
         val preview = Hawk.get(HawkConfig.SHOW_PREVIEW, true)
         Hawk.put(HawkConfig.SHOW_PREVIEW, false)
-        val intent = Intent(context, DetailActivity::class.java)
+        val intent = Intent(context, DetailScreen::class.java)
             .putExtra("id", s.itemId())
             .putExtra("sourceKey", "phone-fixture")
             .putExtra("title", "手机播放测试")
         try {
-            ActivityScenario.launch<DetailActivity>(intent).use { detail ->
+            ScreenScenario.launch<DetailScreen>(intent).use { detail ->
                 await(BooleanSupplier {
                     val loaded = booleanArrayOf(false)
                     detail.onActivity { activity ->
-                        val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                        val list = activity.requireViewById<RecyclerView>(R.id.mGridView)
                         loaded[0] = list.adapter != null && list.adapter!!.itemCount == 120
                     }
                     loaded[0]
@@ -1509,15 +1489,15 @@ class NativeBehaviorTest {
                 onView(withId(R.id.tvCollect)).perform(scrollTo()).check(matches(isDisplayed()))
                 onView(withId(R.id.mSeriesSortTv)).perform(scrollTo()).check(matches(isDisplayed()))
                 detail.onActivity { activity ->
-                    val groups = activity.findViewById<RecyclerView>(R.id.mSeriesGroupView)
+                    val groups = activity.requireViewById<RecyclerView>(R.id.mSeriesGroupView)
                     assertTrue("Episode group hit targets must not be clipped", groups.height >= MobileSheets.dp(activity, 48f))
-                    val scroll = activity.findViewById<NestedScrollView>(R.id.mobileDetailScroll)
+                    val scroll = activity.requireViewById<NestedScrollView>(R.id.mobileDetailScroll)
                     scroll.fullScroll(View.FOCUS_DOWN)
-                    activity.findViewById<RecyclerView>(R.id.mGridView).scrollToPosition(119)
+                    activity.requireViewById<RecyclerView>(R.id.mGridView).scrollToPosition(119)
                 }
                 SystemClock.sleep(500)
                 detail.onActivity { activity ->
-                    val list = activity.findViewById<RecyclerView>(R.id.mGridView)
+                    val list = activity.requireViewById<RecyclerView>(R.id.mGridView)
                     val last = list.findViewHolderForAdapterPosition(119)!!.itemView
                     last.requestRectangleOnScreen(Rect(0, 0, last.width, last.height), true)
                 }
@@ -1530,6 +1510,107 @@ class NativeBehaviorTest {
     }
 
     @Throws(Exception::class)
+    @Test
+    fun singleHostPreservesSearchStateAndDestroysPoppedScreen() {
+        val intent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(context, SearchScreen::class.java)
+        androidx.test.core.app.ActivityScenario.launch<com.github.tvbox.osc.ui.activity.MainActivity>(intent).use { scenario ->
+            val search = AtomicReference<SearchScreen>()
+            val settings = AtomicReference<SettingsScreen>()
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen is SearchScreen }
+                ready
+            })
+            scenario.onActivity { host ->
+                search.set(host.currentScreen as SearchScreen)
+                search.get().requireViewById<EditText>(R.id.etSearch).setText("导航状态测试")
+                val nextIntent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(host, SettingsScreen::class.java)
+                host.intent = nextIntent
+                host.openScreenIntent(nextIntent)
+            }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { host ->
+                    ready = host.currentScreen is SettingsScreen
+                    if (ready) settings.set(host.currentScreen as SettingsScreen)
+                }
+                ready
+            })
+            scenario.onActivity { host ->
+                org.junit.Assert.assertSame(search.get().hostActivity, settings.get().hostActivity)
+                assertNotNull(settings.get().findViewById<View>(R.id.llApi))
+                host.currentScreen!!.onBackPressed()
+            }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen === search.get() && settings.get().isDestroyed }
+                ready
+            })
+            scenario.onActivity {
+                assertEquals("导航状态测试", search.get().requireViewById<EditText>(R.id.etSearch).text.toString())
+                assertEquals(Lifecycle.State.DESTROYED, settings.get().lifecycle.currentState)
+            }
+            scenario.recreate()
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { host ->
+                    val restored = host.currentScreen as? SearchScreen
+                    ready = restored?.requireViewById<EditText>(R.id.etSearch)?.text?.toString() == "导航状态测试"
+                }
+                ready
+            })
+        }
+    }
+
+    @Test
+    fun singleHostTabsAndConfigurationDialogSurviveRecreation() {
+        val intent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(context, HomeScreen::class.java)
+        androidx.test.core.app.ActivityScenario.launch<com.github.tvbox.osc.ui.activity.MainActivity>(intent).use { scenario ->
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen is HomeScreen }
+                ready
+            })
+            scenario.onActivity { it.navigate("search", tab = true) }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen is SearchScreen }
+                ready
+            })
+            scenario.onActivity {
+                it.currentScreen!!.requireViewById<EditText>(R.id.etSearch).setText("标签恢复测试")
+                it.navigate("setting", tab = true)
+            }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen is SettingsScreen }
+                ready
+            })
+            scenario.onActivity { it.navigate("search", tab = true) }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity {
+                    ready = (it.currentScreen as? SearchScreen)
+                        ?.requireViewById<EditText>(R.id.etSearch)?.text?.toString() == "标签恢复测试"
+                }
+                ready
+            })
+            scenario.onActivity { it.navigate("setting", tab = true) }
+            await(BooleanSupplier {
+                var ready = false
+                scenario.onActivity { ready = it.currentScreen is SettingsScreen }
+                ready
+            })
+            onView(withId(R.id.llApi)).perform(click())
+            onView(withId(R.id.inputLive)).inRoot(isDialog())
+                .perform(replaceText("配置草稿恢复测试"), closeSoftKeyboard())
+            scenario.recreate()
+            onView(withId(R.id.inputLive)).inRoot(isDialog())
+                .check(matches(withText("配置草稿恢复测试")))
+            onView(withId(R.id.mobileCancelApi)).inRoot(isDialog()).perform(click())
+        }
+    }
+
     private fun playback(url: String): JSONObject {
         val result = AtomicReference<JSONObject>()
         val latch = CountDownLatch(1)

@@ -27,7 +27,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.FragmentContainerView
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearSmoothScroller
@@ -36,7 +35,7 @@ import com.chad.library.adapter.base.BaseViewHolder
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.base.App
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.bean.AbsXml
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.SourceBean
@@ -47,7 +46,7 @@ import com.github.tvbox.osc.ui.adapter.SeriesAdapter
 import com.github.tvbox.osc.ui.adapter.SeriesFlagAdapter
 import com.github.tvbox.osc.ui.dialog.DescDialog
 import com.github.tvbox.osc.ui.dialog.QuickSearchDialog
-import com.github.tvbox.osc.ui.fragment.PlayFragment
+import com.github.tvbox.osc.ui.section.PlaybackSection
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FastClickCheckUtil
 import com.github.tvbox.osc.util.EpisodeOrder
@@ -81,7 +80,7 @@ import java.util.concurrent.Executors
  * @date :2020/12/22
  * @description:
  */
-class DetailActivity : BaseActivity() {
+class DetailScreen : ScreenController() {
 
     companion object {
         private const val STATE_FULL_WINDOWS = "detail_full_windows"
@@ -93,11 +92,11 @@ class DetailActivity : BaseActivity() {
     }
 
     private var llLayout: LinearLayout? = null
-    private var llPlayerFragmentContainer: FragmentContainerView? = null
+    private var llPlayerFragmentContainer: FrameLayout? = null
     private var llPlayerFragmentContainerBlock: View? = null
     private var llPlayerPlace: View? = null
     @JvmField
-    var playFragment: PlayFragment? = null
+    var playback: PlaybackSection? = null
     private var thumbContainer: View? = null
     private var ivThumb: ImageView? = null
     private var tvName: TextView? = null
@@ -238,7 +237,7 @@ class DetailActivity : BaseActivity() {
             override fun onItemSelected(parent: TvRecyclerView, itemView: View?, position: Int) {}
 
             override fun onItemClick(parent: TvRecyclerView, itemView: View?, position: Int) {
-                val pf = playFragment ?: return
+                val pf = playback ?: return
                 if (position == qualityPosition) {
                     if (showPreview && !fullWindows && pf.player?.isPlaying() == true) enterFullPreview()
                     return
@@ -253,7 +252,7 @@ class DetailActivity : BaseActivity() {
         firstReverse = false
         preFlag = ""
         if (showPreview) {
-            ensurePlayFragment()
+            ensurePlaybackSection()
             tvPlay?.text = "全屏"
         }
         llPlayerFragmentContainerBlock?.isFocusable = showPreview
@@ -302,7 +301,7 @@ class DetailActivity : BaseActivity() {
 
         tvQuickSearch?.setOnClickListener {
             startQuickSearch()
-            val quickSearchDialog = QuickSearchDialog(this@DetailActivity)
+            val quickSearchDialog = QuickSearchDialog(this@DetailScreen)
             EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH, quickSearchData))
             EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD, quickSearchWord))
             quickSearchDialog.show()
@@ -340,11 +339,11 @@ class DetailActivity : BaseActivity() {
             if (vInfo != null) {
                 if ("加入收藏" == text) {
                     RoomDataManger.insertVodCollect(sourceKey, vInfo)
-                    Toast.makeText(this@DetailActivity, "已加入收藏夹", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailScreen, "已加入收藏夹", Toast.LENGTH_SHORT).show()
                     tvCollect?.text = "取消收藏"
                 } else {
                     RoomDataManger.deleteVodCollect(sourceKey, vInfo)
-                    Toast.makeText(this@DetailActivity, "已移除收藏夹", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailScreen, "已移除收藏夹", Toast.LENGTH_SHORT).show()
                     tvCollect?.text = "加入收藏"
                 }
             }
@@ -354,7 +353,7 @@ class DetailActivity : BaseActivity() {
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             val text = tvPlayUrl?.text?.toString()?.replace("播放地址：", "") ?: ""
             cm?.setPrimaryClip(ClipData.newPlainText(null, text))
-            Toast.makeText(this@DetailActivity, "已复制", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@DetailScreen, "已复制", Toast.LENGTH_SHORT).show()
         }
 
         tvSeriesSort?.setOnClickListener {
@@ -521,7 +520,7 @@ class DetailActivity : BaseActivity() {
                     sData[vInfo.playIndex].selected = true
                     seriesAdapter?.notifyItemChanged(vInfo.playIndex)
                 }
-                if (showPreview && !fullWindows && previewVodInfo != null && TextUtils.equals(vInfo.playFlag, previewVodInfo?.playFlag) && (playFragment?.player?.isPlaying() == true || isCurrentPlaying)) {
+                if (showPreview && !fullWindows && previewVodInfo != null && TextUtils.equals(vInfo.playFlag, previewVodInfo?.playFlag) && (playback?.player?.isPlaying() == true || isCurrentPlaying)) {
                     enterFullPreview()
                 }
                 if (!showPreview || reload) {
@@ -637,13 +636,13 @@ class DetailActivity : BaseActivity() {
             insertVod(firstsourceKey, vInfo)
             App.getInstance().vodInfo = vInfo
             if (showPreview) {
-                ensurePlayFragment()
+                ensurePlaybackSection()
                 updatePreviewVodInfo()
                 App.getInstance().vodInfo = previewVodInfo
-                playFragment?.setData(bundle)
+                playback?.setData(bundle)
             } else {
-                ensurePlayFragment()
-                playFragment?.setData(bundle)
+                ensurePlaybackSection()
+                playback?.setData(bundle)
                 enterFullPreview()
             }
         }
@@ -860,12 +859,12 @@ class DetailActivity : BaseActivity() {
                 if (fallbackResult) {
                     val fallbackSource = ApiConfig.get().getSource(sourceKey)
                     val fallbackName = fallbackSource?.name ?: sourceKey
-                    Toast.makeText(this@DetailActivity, "站点切换至$fallbackName", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailScreen, "站点切换至$fallbackName", Toast.LENGTH_SHORT).show()
                 }
                 showSuccess()
                 if (!TextUtils.isEmpty(absXml.msg) && absXml.msg != "数据列表") {
                     resetDetailFallback()
-                    Toast.makeText(this@DetailActivity, absXml.msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DetailScreen, absXml.msg, Toast.LENGTH_SHORT).show()
                     showEmpty()
                     return@Observer
                 }
@@ -1864,7 +1863,7 @@ class DetailActivity : BaseActivity() {
         OkGo.getInstance().cancelTag("fenci")
         OkGo.getInstance().cancelTag("detail")
         OkGo.getInstance().cancelTag("quick_search")
-        releasePlayFragment()
+        releasePlaybackSection()
         EventBus.getDefault().unregister(this)
     }
 
@@ -1874,7 +1873,7 @@ class DetailActivity : BaseActivity() {
     }
 
     override fun onBackPressed() {
-        val pf = playFragment
+        val pf = playback
         if (fullWindows) {
             if (pf != null && pf.onBackPressed()) return
             exitFullPreview()
@@ -1911,7 +1910,7 @@ class DetailActivity : BaseActivity() {
             startDetailFallbackFromMenu()
             return true
         }
-        val pf = playFragment
+        val pf = playback
         if (pf != null && fullWindows) {
             if (pf.dispatchKeyEvent(event)) {
                 return true
@@ -1921,7 +1920,7 @@ class DetailActivity : BaseActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        val pf = playFragment
+        val pf = playback
         if (event != null && pf != null && fullWindows) {
             if (pf.onKeyDown(keyCode, event)) {
                 return true
@@ -1931,7 +1930,7 @@ class DetailActivity : BaseActivity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
-        val pf = playFragment
+        val pf = playback
         if (event != null && pf != null && fullWindows) {
             if (pf.onKeyUp(keyCode, event)) {
                 return true
@@ -2014,7 +2013,7 @@ class DetailActivity : BaseActivity() {
         fullWindows = full
         setPhoneFullscreen(full)
         requestedOrientation = if (full) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        val pf = playFragment
+        val pf = playback
         if (pf != null) {
             pf.setAutoSwitchLineEnabled(!fullWindows)
             pf.setPreviewMode(!fullWindows)
@@ -2034,7 +2033,7 @@ class DetailActivity : BaseActivity() {
             if (showPreview) {
                 mGridView?.requestFocus()
             } else {
-                playFragment?.pauseForHidden()
+                playback?.pauseForHidden()
                 mGridView?.requestFocus()
             }
         }
@@ -2049,30 +2048,36 @@ class DetailActivity : BaseActivity() {
         }
     }
 
-    fun ensurePlayFragment() {
-        if (playFragment != null) return
-        val fragment = PlayFragment()
-        playFragment = fragment
-        supportFragmentManager.beginTransaction().add(R.id.previewPlayer, fragment).commitNowAllowingStateLoss()
+    fun ensurePlaybackSection() {
+        if (playback != null) return
+        val fragment = PlaybackSection()
+        playback = fragment
+        val container = llPlayerFragmentContainer
+        if (container != null) {
+            val view = fragment.createView(this, container)
+            container.removeAllViews()
+            container.addView(view)
+        }
         fragment.setPreviewMode(!fullWindows)
     }
 
-    fun releasePlayFragment() {
-        val fragment = playFragment ?: return
-        supportFragmentManager.beginTransaction().remove(fragment).commitNowAllowingStateLoss()
-        playFragment = null
+    fun releasePlaybackSection() {
+        val fragment = playback ?: return
+        fragment.destroy()
+        llPlayerFragmentContainer?.removeAllViews()
+        playback = null
     }
 
     fun toggleSubtitleTextSize() {
-        var subtitleTextSize = SubtitleHelper.getTextSize(this)
+        var subtitleTextSize = SubtitleHelper.getTextSize(hostActivity)
         if (!fullWindows) {
             subtitleTextSize = (subtitleTextSize * 0.6).toInt()
         }
         EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_SUBTITLE_SIZE_CHANGE, subtitleTextSize))
     }
 
-    fun getPlayFragment(): PlayFragment? {
-        return playFragment
+    fun getPlaybackSection(): PlaybackSection? {
+        return playback
     }
 
     private fun setTvPlayUrl(url: String) {

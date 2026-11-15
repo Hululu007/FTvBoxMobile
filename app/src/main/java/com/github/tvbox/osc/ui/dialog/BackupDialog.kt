@@ -1,6 +1,6 @@
 package com.github.tvbox.osc.ui.dialog
 
-import android.app.Activity
+import com.github.tvbox.osc.base.findHostActivity
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
@@ -79,7 +79,7 @@ class BackupDialog(context: Context) : BaseDialog(context) {
                     override fun onDenied(permissions: List<String>, never: Boolean) {
                         if (never) {
                             Toast.makeText(context, "获取存储权限失败,请在系统设置中开启", Toast.LENGTH_SHORT).show()
-                            val act = context as? Activity
+                            val act = context.findHostActivity()
                             if (act != null) {
                                 XXPermissions.startPermissionActivity(act, permissions)
                             }

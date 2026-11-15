@@ -330,16 +330,16 @@ class RemoteServer(port: Int, private val mContext: Context) : NanoHTTPD(port) {
 
     private fun handleMedia(): Response {
         try {
-            val activity = App.getInstance().currentActivity
+            val activity = com.github.tvbox.osc.util.AppManager.getInstance().currentScreen()
                 ?: return createJSONResponse(Response.Status.OK, "{}")
             val latch = CountDownLatch(1)
             val result = arrayOf(JsonObject())
             val act = activity
             Handler(Looper.getMainLooper()).post {
                 try {
-                    if (act is com.github.tvbox.osc.ui.activity.DetailActivity) {
-                        val playFragment = act.playFragment
-                        if (playFragment != null) result[0] = playFragment.mediaInfo
+                    if (act is com.github.tvbox.osc.ui.activity.DetailScreen) {
+                        val playback = act.playback
+                        if (playback != null) result[0] = playback.mediaInfo
                     }
                 } catch (th: Throwable) {
                     LOG.e("echo-media handleMedia error: " + th.message)

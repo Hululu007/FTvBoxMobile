@@ -1,6 +1,8 @@
 # Compose 迁移审查与修复
 
-审查对象：`feature/jetpack-compose-migration` 的迁移提交 `55f3d76`；功能对照为父提交 `638cbaa`。
+2026-11-15 更新：应用现在只保留 `MainActivity`，由 Compose `NavHost` 管理导航；原业务 Activity 和 Fragment 已替换为普通 `ScreenController` / `ScreenSection`。播放器及复杂列表继续通过 `AndroidView` 接入，后续可逐页替换。已通过 11 项 JVM 测试和 14 项真机仪器测试。
+
+以下保留此前的迁移审查记录。审查对象为 `feature/jetpack-compose-migration` 的迁移提交 `55f3d76`，功能对照为父提交 `638cbaa`。
 
 ## 主要发现
 

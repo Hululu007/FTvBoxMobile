@@ -1,4 +1,4 @@
-package com.github.tvbox.osc.ui.fragment
+package com.github.tvbox.osc.ui.section
 
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
@@ -40,7 +40,7 @@ import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.api.DanmakuApi
 import com.github.tvbox.osc.base.App
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.bean.ParseBean
 import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.bean.Subtitle
@@ -57,7 +57,7 @@ import com.github.tvbox.osc.player.TrackInfoBean
 import com.github.tvbox.osc.player.controller.VodController
 import com.github.tvbox.osc.player.danmu.DanmuLoadController
 import com.github.tvbox.osc.server.ControlManager
-import com.github.tvbox.osc.ui.activity.DetailActivity
+import com.github.tvbox.osc.ui.activity.DetailScreen
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter
 import com.github.tvbox.osc.ui.dialog.CastDeviceDialog
 import com.github.tvbox.osc.ui.dialog.DanmuSettingDialog
@@ -122,7 +122,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.regex.Pattern
 
-open class PlayFragment : BaseLazyFragment() {
+open class PlaybackSection : ScreenSection() {
     companion object {
         private const val MSG_PARSE_TIMEOUT = 100
         private const val MSG_RESOLVE_PLAY_URL_TIMEOUT = 101
@@ -316,7 +316,7 @@ open class PlayFragment : BaseLazyFragment() {
             }
 
             override fun getSavedProgress(url: String): Long {
-                return this@PlayFragment.getSavedProgress(url)
+                return this@PlaybackSection.getSavedProgress(url)
             }
         }
         mVideoView?.setProgressManager(progressManager)
@@ -373,18 +373,18 @@ open class PlayFragment : BaseLazyFragment() {
 
             override fun playNext(rmProgress: Boolean) {
                 val preProgressKey = progressKey
-                this@PlayFragment.playNext(rmProgress)
+                this@PlaybackSection.playNext(rmProgress)
                 if (rmProgress && preProgressKey != null) {
                     CacheManager.delete(MD5.string2MD5(preProgressKey), 0)
                 }
             }
 
             override fun playPre() {
-                this@PlayFragment.playPrevious()
+                this@PlaybackSection.playPrevious()
             }
 
             override fun showEpisodeDialog() {
-                this@PlayFragment.showEpisodeDialog()
+                this@PlaybackSection.showEpisodeDialog()
             }
 
             override fun changeParse(pb: ParseBean) {
@@ -954,7 +954,7 @@ open class PlayFragment : BaseLazyFragment() {
                         val playTitle = (info?.name ?: "") + " " + (vs?.name ?: "")
                         setTip("调用外部播放器" + PlayerHelper.getPlayerName(playerType) + "进行播放", true, false)
                         val progress = getSavedProgress(progressKey ?: "")
-                        val callResult = PlayerHelper.runExternalPlayer(playerType, requireActivity(), playUrlStr, playTitle, playSubtitle, headers, progress)
+                        val callResult = PlayerHelper.runExternalPlayer(playerType, requireActivity().hostActivity, playUrlStr, playTitle, playSubtitle, headers, progress)
                         setTip("调用外部播放器" + PlayerHelper.getPlayerName(playerType) + if (callResult) "成功" else "失败", callResult, !callResult)
                         return@runOnUiThread
                     }
@@ -1721,7 +1721,7 @@ open class PlayFragment : BaseLazyFragment() {
 
     private fun requestDetailFallbackAfterLinesExhausted(): Boolean {
         val act = activity
-        return if (act is DetailActivity) {
+        return if (act is DetailScreen) {
             act.startDetailFallbackAfterLinesExhausted()
         } else false
     }
@@ -2596,7 +2596,7 @@ open class PlayFragment : BaseLazyFragment() {
             super.setOverScrollMode(mode)
             val ctx = mContext
             if (ctx is Activity) {
-                AutoSize.autoConvertDensityOfCustomAdapt(ctx, this@PlayFragment)
+                AutoSize.autoConvertDensityOfCustomAdapt(ctx, this@PlaybackSection)
             }
         }
 
@@ -2610,7 +2610,7 @@ open class PlayFragment : BaseLazyFragment() {
             super.setOverScrollMode(mode)
             val ctx = mContext
             if (ctx is Activity) {
-                AutoSize.autoConvertDensityOfCustomAdapt(ctx, this@PlayFragment)
+                AutoSize.autoConvertDensityOfCustomAdapt(ctx, this@PlaybackSection)
             }
         }
 

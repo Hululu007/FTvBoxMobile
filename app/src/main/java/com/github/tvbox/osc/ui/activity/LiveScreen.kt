@@ -32,7 +32,7 @@ import com.github.catvod.crawler.Spider
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.base.App
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.bean.Epginfo
 import com.github.tvbox.osc.bean.LiveChannelGroup
 import com.github.tvbox.osc.bean.LiveChannelItem
@@ -107,7 +107,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * @date :2021/1/12
  * @description:
  */
-class LivePlayActivity : BaseActivity() {
+class LiveScreen : ScreenController() {
 
     companion object {
         @JvmField
@@ -272,7 +272,7 @@ class LivePlayActivity : BaseActivity() {
         context = this
         epgStringAddress = getConfiguredEpgAddress()
 
-        setLoadSir(findViewById(R.id.live_root))
+        setLoadSir(requireNotNull(findViewById(R.id.live_root)))
         mVideoView = findViewById(R.id.mVideoView)
         switchChannelSnapshotOverlay = findViewById(R.id.switchChannelSnapshotOverlay)
         switchChannelSnapshotImage = findViewById(R.id.switchChannelSnapshotImage)
@@ -441,7 +441,7 @@ class LivePlayActivity : BaseActivity() {
                 }
             }
             actions.addView(button, LinearLayout.LayoutParams(-2, -2).apply {
-                if (i > 0) marginStart = com.fbox.mobile.MobileSheets.dp(this@LivePlayActivity, 8f)
+                if (i > 0) marginStart = com.fbox.mobile.MobileSheets.dp(this@LiveScreen, 8f)
             })
         }
         val scroll = android.widget.HorizontalScrollView(this).apply {
@@ -2632,14 +2632,14 @@ class LivePlayActivity : BaseActivity() {
                             mVideoView?.release()
                             ApiConfig.get().refreshLiveApiHistoryItems()
                             setEmptyLiveChannelList(false)
-                            Toast.makeText(this@LivePlayActivity, msg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@LiveScreen, msg, Toast.LENGTH_SHORT).show()
                         }
                     }
 
                     override fun notice(msg: String) {
                         mHandler.post {
                             if (requestId != liveConfigRequestId || isFinishing) return@post
-                            Toast.makeText(this@LivePlayActivity, msg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@LiveScreen, msg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 })
@@ -2734,7 +2734,7 @@ class LivePlayActivity : BaseActivity() {
 
             override fun notice(msg: String) {
                 mHandler.post {
-                    Toast.makeText(this@LivePlayActivity, msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LiveScreen, msg, Toast.LENGTH_SHORT).show()
                 }
             }
         })

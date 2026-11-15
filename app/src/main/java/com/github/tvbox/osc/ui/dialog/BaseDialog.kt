@@ -12,6 +12,8 @@ import androidx.activity.ComponentDialog
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.fbox.mobile.MobileSheets
+import com.github.tvbox.osc.base.findHostActivity
+import com.github.tvbox.osc.base.findScreenController
 import com.github.tvbox.osc.R
 import xyz.doikki.videoplayer.util.CutoutUtil
 
@@ -83,9 +85,17 @@ open class BaseDialog : ComponentDialog {
         }
     }
 
-    constructor(context: Context) : super(context, R.style.CustomDialogStyle)
+    private fun bindScreen(context: Context) {
+        val screen = context.findScreenController() ?: return
+        setOwnerActivity(screen.hostActivity)
+        screen.lifecycle.addObserver(androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_DESTROY && isShowing) dismiss()
+        })
+    }
 
-    constructor(context: Context, customDialogStyle: Int) : super(context, customDialogStyle)
+    constructor(context: Context) : super(context, R.style.CustomDialogStyle) { bindScreen(context) }
+
+    constructor(context: Context, customDialogStyle: Int) : super(context, customDialogStyle) { bindScreen(context) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         CutoutUtil.adaptCutoutAboveAndroidP(this, true)
@@ -132,8 +142,8 @@ open class BaseDialog : ComponentDialog {
     }
 
     private fun isContextInvalid(): Boolean {
-        val ctx = context
-        if (ctx !is Activity) {
+        val ctx = context.findHostActivity()
+        if (ctx == null) {
             return false
         }
         return ctx.isFinishing || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && ctx.isDestroyed)

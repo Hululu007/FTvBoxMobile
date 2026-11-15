@@ -1,4 +1,4 @@
-package com.github.tvbox.osc.ui.fragment
+package com.github.tvbox.osc.ui.section
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -13,13 +13,13 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort
 import com.github.tvbox.osc.event.RefreshEvent
-import com.github.tvbox.osc.ui.activity.DetailActivity
-import com.github.tvbox.osc.ui.activity.FastSearchActivity
-import com.github.tvbox.osc.ui.activity.SearchActivity
+import com.github.tvbox.osc.ui.activity.DetailScreen
+import com.github.tvbox.osc.ui.activity.FastSearchScreen
+import com.github.tvbox.osc.ui.activity.SearchScreen
 import com.github.tvbox.osc.ui.adapter.GridAdapter
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView
@@ -39,7 +39,7 @@ import java.util.Stack
  * @date :2020/12/21
  * @description:
  */
-class GridFragment : BaseLazyFragment() {
+class CatalogSection : ScreenSection() {
     private var sortData: MovieSort.SortData? = null
     private var mGridView: TvRecyclerView? = null
     private var sourceViewModel: SourceViewModel? = null
@@ -75,12 +75,12 @@ class GridFragment : BaseLazyFragment() {
 
     companion object {
         @JvmStatic
-        fun newInstance(sortData: MovieSort.SortData?): GridFragment {
-            return GridFragment().setArguments(sortData)
+        fun newInstance(sortData: MovieSort.SortData?): CatalogSection {
+            return CatalogSection().setArguments(sortData)
         }
     }
 
-    fun setArguments(sortData: MovieSort.SortData?): GridFragment {
+    fun setArguments(sortData: MovieSort.SortData?): CatalogSection {
         this.sortData = sortData
         return this
     }
@@ -140,12 +140,12 @@ class GridFragment : BaseLazyFragment() {
         val info = GridInfo().apply {
             sortID = currentSort.id ?: ""
             mGridView = currentView
-            gridAdapter = this@GridFragment.gridAdapter
-            page = this@GridFragment.page
-            maxPage = this@GridFragment.maxPage
-            isLoad = this@GridFragment.isLoad
-            hasActionItems = this@GridFragment.hasActionItems
-            focusedView = this@GridFragment.focusedView
+            gridAdapter = this@CatalogSection.gridAdapter
+            page = this@CatalogSection.page
+            maxPage = this@CatalogSection.maxPage
+            isLoad = this@CatalogSection.isLoad
+            hasActionItems = this@CatalogSection.hasActionItems
+            focusedView = this@CatalogSection.focusedView
         }
         mGrids.push(info)
     }
@@ -277,13 +277,13 @@ class GridFragment : BaseLazyFragment() {
                 } else {
                     if (vid != null && vid.startsWith("msearch:")) {
                         if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) && enableFastSearch()) {
-                            jumpActivity(FastSearchActivity::class.java, bundle)
+                            jumpActivity(FastSearchScreen::class.java, bundle)
                         } else {
-                            jumpActivity(SearchActivity::class.java, bundle)
+                            jumpActivity(SearchScreen::class.java, bundle)
                         }
                     } else {
                         bundle.putString("picture", video.pic)
-                        jumpActivity(DetailActivity::class.java, bundle)
+                        jumpActivity(DetailScreen::class.java, bundle)
                     }
                 }
             }
@@ -301,9 +301,9 @@ class GridFragment : BaseLazyFragment() {
                 }
                 if (vid != null && vid.startsWith("msearch:")) {
                     bundle.putString("picture", video.pic)
-                    jumpActivity(DetailActivity::class.java, bundle)
+                    jumpActivity(DetailScreen::class.java, bundle)
                 } else {
-                    jumpActivity(FastSearchActivity::class.java, bundle)
+                    jumpActivity(FastSearchScreen::class.java, bundle)
                 }
             }
             true

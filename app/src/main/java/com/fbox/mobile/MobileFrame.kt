@@ -1,94 +1,86 @@
 package com.fbox.mobile
 
-import android.content.Intent
-import android.view.View
-import android.widget.LinearLayout
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.github.tvbox.osc.R
 import androidx.compose.ui.text.style.TextOverflow
-import com.github.tvbox.osc.base.BaseActivity
+import androidx.compose.ui.tooling.preview.Preview
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.ui.activity.*
 
-/** Compose navigation with a synchronously attached host for native Fragment screens. */
-class MobileFrame(private val activity: BaseActivity, private val content: View) {
-    val view = LinearLayout(activity).apply {
-        orientation = LinearLayout.VERTICAL
-        setBackgroundColor(0xFF10131A.toInt())
-    }
-    private val chrome = ComposeView(activity)
-    private val inlineNavigation = activity is SearchActivity || activity is FastSearchActivity
-
-    init {
-        val home = activity is HomeActivity
-        // FragmentManager must find its containers before Activity.onStart.
-        if (!home && !inlineNavigation) view.addView(chrome)
-        view.addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-        if (home) view.addView(chrome)
-        setFullscreen(activity is LivePlayActivity)
-    }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    fun attach() {
-        if (inlineNavigation) {
-            content.findViewById<View>(R.id.mobileSearchBack)?.setOnClickListener { activity.onBackPressed() }
-            return
-        }
-        chrome.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        chrome.setContent {
-            MaterialTheme(colorScheme = darkColorScheme(
-                primary = Color(0xFFAEC6FF),
-                background = Color(0xFF10131A),
-                surface = Color(0xFF171C26),
-            )) {
-                if (activity is HomeActivity) NavigationBar(windowInsets = WindowInsets(0, 0, 0, 0)) {
-                    NavigationBarItem(true, {}, { Icon(Icons.Default.Home, null) }, label = { Text("首页") })
-                    NavigationBarItem(false, { open(SearchActivity::class.java) }, { Icon(Icons.Default.Search, null) }, label = { Text("搜索") })
-                    NavigationBarItem(false, { open(LivePlayActivity::class.java) }, { Icon(Icons.Default.LiveTv, null) }, label = { Text("直播") })
-                    NavigationBarItem(false, { open(SettingActivity::class.java) }, { Icon(Icons.Default.Settings, null) }, label = { Text("设置") })
-                } else TopAppBar(
-                    title = { Text(screenTitle(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    actions = {
-                        if (activity is HistoryActivity || activity is CollectActivity) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                MobileIconAction(R.drawable.ic_action_manage, "管理", { content.findViewById<View>(R.id.tvDelete)?.performClick() })
-                                MobileIconAction(R.drawable.icon_delete, "清空", { content.findViewById<View>(R.id.tvClear)?.performClick() })
+/** The app shell is owned entirely by Compose; content controllers never add navigation bars. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MobileFrame(
+    screen: ScreenController?,
+    route: String,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit,
+    content: @Composable (Modifier) -> Unit
+) {
+    MaterialTheme(colorScheme = darkColorScheme(
+        primary = Color(0xFFAEC6FF),
+        background = Color(0xFF10131A),
+        surface = Color(0xFF171C26),
+    )) {
+        val fullscreen = screen?.fullscreen == true
+        val roots = listOf("home", "search", "live", "setting")
+        Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            topBar = {
+                if (!fullscreen && route !in listOf("home", "search", "fast_search", "web_login")) {
+                    TopAppBar(
+                        title = { Text(title(route, screen), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
+                        actions = {
+                            if (route == "history" || route == "collect") {
+                                MobileIconAction(R.drawable.ic_action_manage, "管理", { screen?.findViewById<android.view.View>(R.id.tvDelete)?.performClick() })
+                                MobileIconAction(R.drawable.icon_delete, "清空", { screen?.findViewById<android.view.View>(R.id.tvClear)?.performClick() })
                             }
+                        },
+                        windowInsets = WindowInsets(0, 0, 0, 0)
+                    )
+                }
+            },
+            bottomBar = {
+                if (!fullscreen && route in roots) {
+                    NavigationBar(windowInsets = WindowInsets(0, 0, 0, 0)) {
+                        val icons = listOf(Icons.Default.Home, Icons.Default.Search, Icons.Default.LiveTv, Icons.Default.Settings)
+                        val labels = listOf("首页", "搜索", "直播", "设置")
+                        roots.forEachIndexed { index, destination ->
+                            NavigationBarItem(
+                                selected = route == destination,
+                                onClick = { onNavigate(destination) },
+                                icon = { Icon(icons[index], labels[index]) },
+                                label = { Text(labels[index]) }
+                            )
                         }
-                    },
-                    windowInsets = WindowInsets(0, 0, 0, 0),
-                    navigationIcon = {
-                        IconButton(onClick = { activity.onBackPressed() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回")
-                        }
-                    },
-                )
+                    }
+                }
             }
-        }
+        ) { padding -> content(Modifier.fillMaxSize().padding(padding)) }
     }
+}
 
-    fun setFullscreen(value: Boolean) { chrome.visibility = if (value) View.GONE else View.VISIBLE }
-    private fun open(type: Class<out BaseActivity>) = activity.startActivity(Intent(activity, type))
-    private fun screenTitle() = when (activity) {
-        is DetailActivity -> activity.intent.getStringExtra("title")?.takeIf { it.isNotBlank() } ?: "影片详情"
-        is SearchActivity, is FastSearchActivity -> "搜索"
-        is SettingActivity -> "设置"
-        is HistoryActivity -> "观看历史"
-        is CollectActivity -> "收藏"
-        is LocalFileActivity -> "本地文件"
-        is PushActivity -> "链接播放"
-        else -> "FBox"
-    }
+private fun title(route: String, screen: ScreenController?): String = when (route) {
+    "detail" -> screen?.intent?.getStringExtra("title")?.takeIf { it.isNotBlank() } ?: "影片详情"
+    "setting" -> "设置"
+    "history" -> "观看历史"
+    "collect" -> "收藏"
+    "local_file" -> "本地文件"
+    "push" -> "链接播放"
+    "live" -> "电视直播"
+    else -> "FBox"
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MobileFramePreview() {
+    MobileFrame(null, "home", {}, {}) { modifier -> Box(modifier) }
 }

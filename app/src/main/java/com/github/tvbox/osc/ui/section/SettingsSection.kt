@@ -1,4 +1,4 @@
-package com.github.tvbox.osc.ui.fragment
+package com.github.tvbox.osc.ui.section
 
 import android.content.Intent
 import android.database.Cursor
@@ -17,12 +17,12 @@ import androidx.recyclerview.widget.DiffUtil
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.api.DanmakuApi
-import com.github.tvbox.osc.base.BaseActivity
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenController
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.bean.IJKCode
 import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.event.RefreshEvent
-import com.github.tvbox.osc.ui.activity.SettingActivity
+import com.github.tvbox.osc.ui.activity.SettingsScreen
 import com.github.tvbox.osc.ui.adapter.ApiHistoryDialogAdapter
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter
 import com.github.tvbox.osc.ui.dialog.AboutDialog
@@ -59,7 +59,7 @@ import java.util.Arrays
  * @date :2020/12/23
  * @description:
  */
-class ModelSettingFragment : BaseLazyFragment() {
+class SettingsSection : ScreenSection() {
     private var tvDebugOpen: TextView? = null
     private var tvMediaCodec: TextView? = null
     private var tvParseWebView: TextView? = null
@@ -86,6 +86,7 @@ class ModelSettingFragment : BaseLazyFragment() {
     private var tvHomeDefaultShow: TextView? = null
     private var apiDialog: ApiDialog? = null
     private var selectLocalLive = false
+    private var restoredApiDialog: Bundle? = null
     private var tvDanmuOpenText: TextView? = null
     private var tvDanmuApiText: TextView? = null
 
@@ -102,17 +103,29 @@ class ModelSettingFragment : BaseLazyFragment() {
         var foundRemoteTv: Boolean = false
 
         @JvmStatic
-        fun newInstance(): ModelSettingFragment {
-            return ModelSettingFragment().setArguments()
+        fun newInstance(): SettingsSection {
+            return SettingsSection().setArguments()
         }
     }
 
-    fun setArguments(): ModelSettingFragment {
+    fun setArguments(): SettingsSection {
         return this
     }
 
     override fun getLayoutResID(): Int {
         return R.layout.fragment_model
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        selectLocalLive = savedInstanceState?.getBoolean("select_local_live") ?: false
+        restoredApiDialog = savedInstanceState?.getBundle("api_dialog")
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("select_local_live", selectLocalLive)
+        apiDialog?.takeIf { it.isShowing }?.let { outState.putBundle("api_dialog", it.onSaveInstanceState()) }
     }
 
     override fun init() {
@@ -211,7 +224,7 @@ class ModelSettingFragment : BaseLazyFragment() {
             if (!wallpaper.isNullOrEmpty()) {
                 OkGo.get<File>(wallpaper).execute(object : FileCallback(act.filesDir.absolutePath, "wp") {
                     override fun onSuccess(response: Response<File>) {
-                        (act as? BaseActivity)?.changeWallpaper(true)
+                        (act as? ScreenController)?.changeWallpaper(true)
                     }
                 })
             }
@@ -221,7 +234,7 @@ class ModelSettingFragment : BaseLazyFragment() {
             FastClickCheckUtil.check(v)
             val wp = File(act.filesDir.absolutePath + "/wp")
             if (wp.exists()) wp.delete()
-            (act as? BaseActivity)?.changeWallpaper(true)
+            (act as? ScreenController)?.changeWallpaper(true)
         }
 
         findViewById<View>(R.id.llHomeApi)?.setOnClickListener { v ->
@@ -286,33 +299,7 @@ class ModelSettingFragment : BaseLazyFragment() {
 
         findViewById<View>(R.id.llApi)?.setOnClickListener { v ->
             FastClickCheckUtil.check(v)
-            apiDialog = ApiDialog(act)
-            val dialog = apiDialog ?: return@setOnClickListener
-            EventBus.getDefault().register(dialog)
-            dialog.setOnListener(object : ApiDialog.OnListener {
-                override fun onchange(api: String) {
-                    val oldApi = Hawk.get(HawkConfig.API_URL, "")
-                    Hawk.put(HawkConfig.API_URL, api)
-                    if (!HistoryHelper.isApiLineHistory(api)) {
-                        HistoryHelper.clearApiLineList()
-                    }
-                    tvApi?.text = api
-                    refreshApiLineText()
-                    if (oldApi != api) {
-                        restartAppAfterConfigChanged()
-                    }
-                }
-
-                override fun onLocalConfig(live: Boolean) {
-                    openLocalConfig(live)
-                }
-            })
-            dialog.setOnDismissListener {
-                (act as? BaseActivity)?.hideSysBar()
-                EventBus.getDefault().unregister(dialog)
-                apiDialog = null
-            }
-            dialog.show()
+            showApiDialog()
         }
 
         findViewById<View>(R.id.llApiHistory)?.setOnClickListener {
@@ -570,7 +557,7 @@ class ModelSettingFragment : BaseLazyFragment() {
             dialog.show()
         }
 
-        SettingActivity.callback = SettingActivity.DevModeCallback {
+        SettingsScreen.callback = SettingsScreen.DevModeCallback {
             findViewById<View>(R.id.llDebug)?.visibility = View.VISIBLE
         }
 
@@ -680,6 +667,35 @@ class ModelSettingFragment : BaseLazyFragment() {
 
         findViewById<View>(R.id.llIjkCachePlay)?.setOnClickListener { v -> onClickIjkCachePlay(v) }
         findViewById<View>(R.id.llClearCache)?.setOnClickListener { v -> onClickClearCache(v) }
+        restoredApiDialog?.let { showApiDialog(it) }
+        restoredApiDialog = null
+    }
+
+    private fun showApiDialog(savedState: Bundle? = null): ApiDialog {
+        apiDialog?.let { return it }
+        val dialog = ApiDialog(requireContext())
+        apiDialog = dialog
+        EventBus.getDefault().register(dialog)
+        dialog.setOnListener(object : ApiDialog.OnListener {
+            override fun onchange(api: String) {
+                val oldApi = Hawk.get(HawkConfig.API_URL, "")
+                Hawk.put(HawkConfig.API_URL, api)
+                if (!HistoryHelper.isApiLineHistory(api)) HistoryHelper.clearApiLineList()
+                tvApi?.text = api
+                refreshApiLineText()
+                if (oldApi != api) restartAppAfterConfigChanged()
+            }
+
+            override fun onLocalConfig(live: Boolean) { openLocalConfig(live) }
+        })
+        dialog.setOnDismissListener {
+            mActivity?.hideSysBar()
+            EventBus.getDefault().unregister(dialog)
+            if (apiDialog === dialog) apiDialog = null
+        }
+        dialog.show()
+        savedState?.let(dialog::onRestoreInstanceState)
+        return dialog
     }
 
     private fun restartAppAfterConfigChanged() {
@@ -806,7 +822,7 @@ class ModelSettingFragment : BaseLazyFragment() {
             Toast.makeText(context, "读取本地配置失败", Toast.LENGTH_SHORT).show()
             return
         }
-        apiDialog?.setLocalApi(api, selectLocalLive)
+        showApiDialog().setLocalApi(api, selectLocalLive)
     }
 
     private fun localConfigToApi(uri: Uri): String {
@@ -921,8 +937,9 @@ class ModelSettingFragment : BaseLazyFragment() {
     }
 
     override fun onDestroyView() {
+        apiDialog?.dismiss()
         super.onDestroyView()
-        SettingActivity.callback = null
+        SettingsScreen.callback = null
     }
 
     fun getHomeRecName(type: Int): String {

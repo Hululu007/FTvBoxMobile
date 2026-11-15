@@ -2,7 +2,6 @@ package com.github.tvbox.osc.base
 
 import android.app.Activity
 import androidx.multidex.MultiDexApplication
-import com.fbox.mobile.LegacyFlutterImport
 import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.callback.EmptyCallback
@@ -42,12 +41,11 @@ class App : MultiDexApplication() {
         ControlManager.init(this)
         // 初始化数据库
         AppDataManager.init()
-        LegacyFlutterImport.run(this)
         LoadSir.beginBuilder()
             .addCallback(EmptyCallback())
             .addCallback(LoadingCallback())
             .commit()
-        AutoSizeConfig.getInstance().setCustomFragment(true).unitsManager
+        AutoSizeConfig.getInstance().setCustomFragment(false).unitsManager
             .setSupportDP(false)
             .setSupportSP(false)
             .supportSubunits = Subunits.MM

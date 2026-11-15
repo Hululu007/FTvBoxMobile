@@ -26,7 +26,7 @@ import com.fbox.mobile.MobileSheets
 import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.bean.AbsXml
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.SourceBean
@@ -75,7 +75,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * @date :2020/12/23
  * @description:
  */
-class SearchActivity : BaseActivity() {
+class SearchScreen : ScreenController() {
 
     companion object {
         private const val HOT_SEARCH_URL = "https://movie.douban.com/j/search_subjects?type=tv&tag=%E7%83%AD%E9%97%A8&sort=recommend&page_limit=20&page_start=0"
@@ -237,7 +237,7 @@ class SearchActivity : BaseActivity() {
         tvSearchCheckboxBtn?.setOnClickListener {
             val searchAbleSource = ApiConfig.get().getSearchSourceBeanList()
             if (mSearchCheckboxDialog == null) {
-                mSearchCheckboxDialog = SearchCheckboxDialog(this@SearchActivity, searchAbleSource.toMutableList(), mCheckSources)
+                mSearchCheckboxDialog = SearchCheckboxDialog(this@SearchScreen, searchAbleSource.toMutableList(), mCheckSources)
             } else {
                 if (searchAbleSource.size != mSearchCheckboxDialog?.mSourceList?.size) {
                     mSearchCheckboxDialog?.mSourceList = searchAbleSource.toMutableList()
@@ -263,7 +263,7 @@ class SearchActivity : BaseActivity() {
         if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
             val bundle = Bundle()
             bundle.putString("title", keyword)
-            jumpActivity(FastSearchActivity::class.java, bundle)
+            jumpActivity(FastSearchScreen::class.java, bundle)
         } else {
             search(keyword)
         }
@@ -401,7 +401,7 @@ class SearchActivity : BaseActivity() {
             putString("picture", video.pic)
         }
         putDetailFallbackCandidates(bundle, video)
-        jumpActivity(DetailActivity::class.java, bundle)
+        jumpActivity(DetailScreen::class.java, bundle)
     }
 
     override fun onBackPressed() {
@@ -759,7 +759,7 @@ class SearchActivity : BaseActivity() {
             }
         }
         if (candidates.isNotEmpty()) {
-            bundle.putSerializable(DetailActivity.EXTRA_DETAIL_FALLBACK_CANDIDATES, candidates)
+            bundle.putSerializable(DetailScreen.EXTRA_DETAIL_FALLBACK_CANDIDATES, candidates)
         }
     }
 

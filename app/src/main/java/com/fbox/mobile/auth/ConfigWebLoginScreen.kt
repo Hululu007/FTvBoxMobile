@@ -13,7 +13,7 @@ import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.fbox.mobile.MobileSheets
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.SourceBean
@@ -24,7 +24,9 @@ import java.util.Collections
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class ConfigWebLoginActivity : AppCompatActivity() {
+class ConfigWebLoginScreen : ScreenController() {
+    override fun getLayoutResID(): Int = 0
+    override fun init() {}
     private var web: WebView? = null
     private var status: TextView? = null
     private var save: TextView? = null

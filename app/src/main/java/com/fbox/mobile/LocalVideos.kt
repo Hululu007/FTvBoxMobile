@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
-import com.github.tvbox.osc.ui.activity.DetailActivity
+import com.github.tvbox.osc.ui.activity.DetailScreen
 
 object LocalVideos {
     const val SOURCE = "local_file"
@@ -28,7 +28,7 @@ object LocalVideos {
 
     @JvmStatic
     fun intent(context: Context, uri: Uri): Intent {
-        return Intent(context, DetailActivity::class.java)
+        return com.github.tvbox.osc.ui.activity.ScreenIntents.create(context, DetailScreen::class.java)
             .putExtra("id", uri.toString())
             .putExtra("sourceKey", SOURCE)
             .putExtra("title", title(context, uri))

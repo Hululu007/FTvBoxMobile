@@ -12,11 +12,11 @@ import androidx.viewpager.widget.ViewPager
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.base.BaseActivity
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenController
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.ui.adapter.SettingMenuAdapter
 import com.github.tvbox.osc.ui.adapter.SettingPageAdapter
-import com.github.tvbox.osc.ui.fragment.ModelSettingFragment
+import com.github.tvbox.osc.ui.section.SettingsSection
 import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.HawkConfig
 import com.orhanobut.hawk.Hawk
@@ -29,7 +29,7 @@ import java.util.ArrayList
  * @date :2020/12/23
  * @description:
  */
-class SettingActivity : BaseActivity() {
+class SettingsScreen : ScreenController() {
 
     fun interface DevModeCallback {
         fun onChange()
@@ -44,7 +44,7 @@ class SettingActivity : BaseActivity() {
     private var mViewPager: ViewPager? = null
     private var sortAdapter: SettingMenuAdapter? = null
     private var pageAdapter: SettingPageAdapter? = null
-    private val fragments: MutableList<BaseLazyFragment> = ArrayList()
+    private val fragments: MutableList<ScreenSection> = ArrayList()
     private var sortChange = false
     private var defaultSelected = 0
     private var sortFocused = 0
@@ -119,8 +119,8 @@ class SettingActivity : BaseActivity() {
     }
 
     private fun initViewPager() {
-        fragments.add(ModelSettingFragment.newInstance())
-        pageAdapter = SettingPageAdapter(supportFragmentManager, fragments)
+        fragments.add(SettingsSection.newInstance())
+        pageAdapter = SettingPageAdapter(fragments)
         mViewPager?.adapter = pageAdapter
         mViewPager?.currentItem = 0
     }
@@ -162,13 +162,13 @@ class SettingActivity : BaseActivity() {
     override fun onBackPressed() {
         if (currentApi == Hawk.get(HawkConfig.API_URL, "")) {
             if (homeRec != Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC)) {
-                jumpActivity(HomeActivity::class.java, createBundle())
+                jumpActivity(HomeScreen::class.java, createBundle())
             } else if (currentLiveApi != Hawk.get(HawkConfig.LIVE_API_URL, "")) {
-                jumpActivity(HomeActivity::class.java, createBundle())
+                jumpActivity(HomeScreen::class.java, createBundle())
             }
         } else {
-            AppManager.getInstance().finishActivity(HomeActivity::class.java)
-            jumpActivity(HomeActivity::class.java)
+            AppManager.getInstance().finishActivity(HomeScreen::class.java)
+            jumpActivity(HomeScreen::class.java)
             finish()
             return
         }

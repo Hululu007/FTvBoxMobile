@@ -33,8 +33,8 @@ import com.fbox.mobile.MobileHomeScroll
 import com.fbox.mobile.MobileSheets
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.base.BaseActivity
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenController
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.bean.AbsSortXml
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort
@@ -46,8 +46,8 @@ import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter
 import com.github.tvbox.osc.ui.adapter.SortAdapter
 import com.github.tvbox.osc.ui.dialog.SelectDialog
 import com.github.tvbox.osc.ui.dialog.TipDialog
-import com.github.tvbox.osc.ui.fragment.GridFragment
-import com.github.tvbox.osc.ui.fragment.UserFragment
+import com.github.tvbox.osc.ui.section.CatalogSection
+import com.github.tvbox.osc.ui.section.HomeSection
 import com.github.tvbox.osc.ui.tv.widget.DefaultTransformer
 import com.github.tvbox.osc.ui.tv.widget.FixedSpeedScroller
 import com.github.tvbox.osc.ui.tv.widget.NoScrollViewPager
@@ -75,7 +75,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.Objects
 
-class HomeActivity : BaseActivity() {
+class HomeScreen : ScreenController() {
     private var topLayout: LinearLayout? = null
     private var contentLayout: LinearLayout? = null
     private var mobileScroll: MobileHomeScroll? = null
@@ -94,7 +94,7 @@ class HomeActivity : BaseActivity() {
     private var sortAdapter: SortAdapter? = null
     private var pageAdapter: HomePageAdapter? = null
     private var currentView: View? = null
-    private val fragments: MutableList<BaseLazyFragment> = ArrayList()
+    private val fragments: MutableList<ScreenSection> = ArrayList()
     private var isDownOrUp = false
     private var sortChange = false
     private var currentSelected = 0
@@ -131,8 +131,8 @@ class HomeActivity : BaseActivity() {
         }
         hideSysBar()
         val params = top.layoutParams as ViewGroup.MarginLayoutParams
-        params.topMargin = if (isPhonePortrait()) 0 else AutoSizeUtils.mm2px(this@HomeActivity, 10.0f)
-        params.height = if (isPhonePortrait()) MobileSheets.dp(this@HomeActivity, 52f) else AutoSizeUtils.mm2px(this@HomeActivity, 50.0f)
+        params.topMargin = if (isPhonePortrait()) 0 else AutoSizeUtils.mm2px(this@HomeScreen, 10.0f)
+        params.height = if (isPhonePortrait()) MobileSheets.dp(this@HomeScreen, 52f) else AutoSizeUtils.mm2px(this@HomeScreen, 50.0f)
         top.layoutParams = params
         top.alpha = 1.0f
         refreshTopInfoTextSize()
@@ -212,7 +212,7 @@ class HomeActivity : BaseActivity() {
         mGridView?.setOnItemListener(object : TvRecyclerView.OnItemListener {
             override fun onItemPreSelected(tvRecyclerView: TvRecyclerView, view: View?, position: Int) {
                 if (isPhonePortrait()) return
-                if (view != null && !this@HomeActivity.isDownOrUp) {
+                if (view != null && !this@HomeScreen.isDownOrUp) {
                     val p = position
                     mHandler.postDelayed({
                         val textView = view.findViewById<TextView>(R.id.tvTitle) ?: return@postDelayed
@@ -234,9 +234,9 @@ class HomeActivity : BaseActivity() {
             override fun onItemSelected(tvRecyclerView: TvRecyclerView, view: View?, position: Int) {
                 if (isPhonePortrait()) return
                 if (view != null) {
-                    this@HomeActivity.currentView = view
-                    this@HomeActivity.isDownOrUp = false
-                    this@HomeActivity.sortChange = true
+                    this@HomeScreen.currentView = view
+                    this@HomeScreen.isDownOrUp = false
+                    this@HomeScreen.sortChange = true
                     view.animate().scaleX(1.1f).scaleY(1.1f).setInterpolator(BounceInterpolator()).setDuration(300).start()
                     val textView = view.findViewById<TextView>(R.id.tvTitle)
                     if (textView != null) {
@@ -248,8 +248,8 @@ class HomeActivity : BaseActivity() {
                     if (sortData != null && sortData.filters.isNotEmpty()) {
                         showFilterIcon(sortData.filterSelectCount())
                     }
-                    this@HomeActivity.sortFocusView = view
-                    this@HomeActivity.sortFocused = position
+                    this@HomeScreen.sortFocusView = view
+                    this@HomeScreen.sortFocused = position
                     mHandler.removeCallbacks(mDataRunnable)
                     mHandler.postDelayed(mDataRunnable, 200)
                 }
@@ -266,9 +266,9 @@ class HomeActivity : BaseActivity() {
                 if (itemView != null && currentSelected == position) {
                     val baseLazyFragment = fragments.getOrNull(currentSelected)
                     val sData = sortAdapter?.getItem(position)
-                    if (baseLazyFragment is GridFragment && sData != null && sData.filters.isNotEmpty()) {
+                    if (baseLazyFragment is CatalogSection && sData != null && sData.filters.isNotEmpty()) {
                         baseLazyFragment.showFilter()
-                    } else if (baseLazyFragment is UserFragment) {
+                    } else if (baseLazyFragment is HomeSection) {
                         showSiteSwitch()
                     }
                 }
@@ -278,11 +278,11 @@ class HomeActivity : BaseActivity() {
         mGridView?.setOnInBorderKeyEventListener { direction, _ ->
             if (direction == View.FOCUS_UP) {
                 val baseLazyFragment = fragments.getOrNull(sortFocused)
-                if (baseLazyFragment is UserFragment) {
+                if (baseLazyFragment is HomeSection) {
                     refreshHomeSort()
                     return@setOnInBorderKeyEventListener true
                 }
-                if (baseLazyFragment is GridFragment) {
+                if (baseLazyFragment is CatalogSection) {
                     baseLazyFragment.forceRefresh()
                     return@setOnInBorderKeyEventListener true
                 }
@@ -291,7 +291,7 @@ class HomeActivity : BaseActivity() {
                 return@setOnInBorderKeyEventListener false
             }
             val baseLazyFragment = fragments.getOrNull(sortFocused)
-            if (baseLazyFragment !is GridFragment) {
+            if (baseLazyFragment !is CatalogSection) {
                 return@setOnInBorderKeyEventListener false
             }
             !baseLazyFragment.isLoad()
@@ -324,11 +324,11 @@ class HomeActivity : BaseActivity() {
                     }
                 }.start()
             } else {
-                jumpActivity(SettingActivity::class.java)
+                jumpActivity(SettingsScreen::class.java)
             }
         }
         tvName?.setOnLongClickListener {
-            jumpActivity(SettingActivity::class.java)
+            jumpActivity(SettingsScreen::class.java)
             true
         }
         contentLayout?.let { setLoadSir(it) }
@@ -387,7 +387,7 @@ class HomeActivity : BaseActivity() {
                 LOG.e("无")
             }
             if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
-                jumpActivity(LivePlayActivity::class.java)
+                jumpActivity(LiveScreen::class.java)
             }
             if (!useCacheConfig) warmSearchSpidersOnce()
             return
@@ -407,7 +407,7 @@ class HomeActivity : BaseActivity() {
 
                     override fun notice(msg: String) {
                         mHandler.post {
-                            Toast.makeText(this@HomeActivity, msg, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@HomeScreen, msg, Toast.LENGTH_SHORT).show()
                         }
                     }
 
@@ -415,7 +415,7 @@ class HomeActivity : BaseActivity() {
                         jarInitOk = true
                         dataInitOk = true
                         mHandler.postDelayed({
-                            Toast.makeText(this@HomeActivity, "$msg jar load err", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@HomeScreen, "$msg jar load err", Toast.LENGTH_SHORT).show()
                             initData()
                         }, 50)
                     }
@@ -426,7 +426,7 @@ class HomeActivity : BaseActivity() {
         ApiConfig.get().loadConfig(useCacheConfig, object : ApiConfig.LoadConfigCallback {
             override fun notice(msg: String) {
                 mHandler.post {
-                    Toast.makeText(this@HomeActivity, msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@HomeScreen, msg, Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -455,7 +455,7 @@ class HomeActivity : BaseActivity() {
                         return@post
                     }
                     if (mConfigErrorDialog == null) {
-                        mConfigErrorDialog = TipDialog(this@HomeActivity, msg, "重试", "取消", object : TipDialog.OnListener {
+                        mConfigErrorDialog = TipDialog(this@HomeScreen, msg, "重试", "取消", object : TipDialog.OnListener {
                             override fun left() {
                                 mHandler.post {
                                     dismissConfigErrorDialog()
@@ -487,7 +487,7 @@ class HomeActivity : BaseActivity() {
                     }
                 }
             }
-        }, this)
+        }, hostActivity)
     }
 
     private fun warmSearchSpidersOnce() {
@@ -524,15 +524,15 @@ class HomeActivity : BaseActivity() {
                 if (data.id == "my0") {
                     val vList = absXml?.videoList
                     if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1 && !vList.isNullOrEmpty()) {
-                        fragments.add(UserFragment.newInstance(vList))
+                        fragments.add(HomeSection.newInstance(vList))
                     } else {
-                        fragments.add(UserFragment.newInstance(null))
+                        fragments.add(HomeSection.newInstance(null))
                     }
                 } else {
-                    fragments.add(GridFragment.newInstance(data))
+                    fragments.add(CatalogSection.newInstance(data))
                 }
             }
-            val pAdapter = HomePageAdapter(supportFragmentManager, fragments)
+            val pAdapter = HomePageAdapter(fragments)
             pageAdapter = pAdapter
             try {
                 val field = ViewPager::class.java.getDeclaredField("mScroller")
@@ -602,7 +602,7 @@ class HomeActivity : BaseActivity() {
         }
         if (HawkConfig.hotVodDelete) {
             HawkConfig.hotVodDelete = false
-            UserFragment.homeHotVodAdapter?.notifyDataSetChanged()
+            HomeSection.homeHotVodAdapter?.notifyDataSetChanged()
             return
         }
 
@@ -612,7 +612,7 @@ class HomeActivity : BaseActivity() {
         }
 
         val baseLazyFragment = this.fragments[this.sortFocused]
-        if (baseLazyFragment is GridFragment) {
+        if (baseLazyFragment is CatalogSection) {
             if (baseLazyFragment.restoreView()) {
                 return
             }
@@ -624,8 +624,8 @@ class HomeActivity : BaseActivity() {
             } else {
                 doExit()
             }
-        } else if (baseLazyFragment is UserFragment && UserFragment.tvHotList?.canScrollVertically(-1) == true) {
-            UserFragment.tvHotList?.scrollToPosition(0)
+        } else if (baseLazyFragment is HomeSection && HomeSection.tvHotList?.canScrollVertically(-1) == true) {
+            HomeSection.tvHotList?.scrollToPosition(0)
             mobileScroll?.expand()
             this.mGridView?.setSelection(0)
         } else {
@@ -639,8 +639,7 @@ class HomeActivity : BaseActivity() {
             unregisterEventBus()
             ControlManager.get().stopServer()
             finish()
-            android.os.Process.killProcess(android.os.Process.myPid())
-            System.exit(0)
+            // MainActivity finishes through the navigation host.
         } else {
             mExitTime = System.currentTimeMillis()
             Toast.makeText(mContext, "再按一次返回键退出应用", Toast.LENGTH_SHORT).show()
@@ -681,12 +680,12 @@ class HomeActivity : BaseActivity() {
     fun refresh(event: RefreshEvent) {
         if (event.type == RefreshEvent.TYPE_PUSH_URL) {
             if (ApiConfig.get().getSource("push_agent") != null) {
-                val newIntent = Intent(mContext, DetailActivity::class.java).apply {
+                val newIntent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(mContext, DetailScreen::class.java).apply {
                     putExtra("id", event.obj as? String)
                     putExtra("sourceKey", "push_agent")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
-                this@HomeActivity.startActivity(newIntent)
+                this@HomeScreen.startActivity(newIntent)
             }
         } else if (event.type == RefreshEvent.TYPE_FILTER_CHANGE) {
             if (currentView != null) {
@@ -697,7 +696,7 @@ class HomeActivity : BaseActivity() {
         } else if (event.type == RefreshEvent.TYPE_CONFIG_AUTH_CHANGED) {
             refreshHomeSort()
             for (fragment in fragments) {
-                if (fragment is GridFragment && fragment.isLoad()) {
+                if (fragment is CatalogSection && fragment.isLoad()) {
                     fragment.forceRefresh()
                 }
             }
@@ -718,10 +717,10 @@ class HomeActivity : BaseActivity() {
                 currentSelected = sortFocused
                 mViewPager?.setCurrentItem(sortFocused, false)
                 changeTop(sortFocused != 0)
-                if (baseLazyFragment is GridFragment && baseLazyFragment.shouldReloadOnSelect()) {
+                if (baseLazyFragment is CatalogSection && baseLazyFragment.shouldReloadOnSelect()) {
                     baseLazyFragment.forceRefresh()
                 }
-            } else if (baseLazyFragment is GridFragment && baseLazyFragment.shouldReloadOnSelect()) {
+            } else if (baseLazyFragment is CatalogSection && baseLazyFragment.shouldReloadOnSelect()) {
                 baseLazyFragment.forceRefresh()
             }
         }
@@ -742,7 +741,7 @@ class HomeActivity : BaseActivity() {
             } else if (event.action == KeyEvent.ACTION_UP) {
                 val pressDuration = System.currentTimeMillis() - menuKeyDownTime
                 if (pressDuration >= LONG_PRESS_THRESHOLD) {
-                    jumpActivity(SettingActivity::class.java)
+                    jumpActivity(SettingsScreen::class.java)
                 } else {
                     showSiteSwitch()
                 }
@@ -832,7 +831,7 @@ class HomeActivity : BaseActivity() {
         var select = sites.indexOf(ApiConfig.get().getHomeSourceBean())
         if (select < 0 || select >= sites.size) select = 0
         if (mSiteSwitchDialog == null) {
-            mSiteSwitchDialog = SelectDialog<SourceBean>(this@HomeActivity)
+            mSiteSwitchDialog = SelectDialog<SourceBean>(this@HomeScreen)
             val tvRecyclerView: TvRecyclerView? = mSiteSwitchDialog?.findViewById(R.id.list)
             var spanCount = Math.floor(sites.size / 20.0).toInt()
             spanCount = Math.min(spanCount, 2)
@@ -878,7 +877,7 @@ class HomeActivity : BaseActivity() {
 
     private fun refreshHomeSort() {
         refreshHomeRec = true
-        UserFragment.homeHotVodAdapter?.setNewData(ArrayList())
+        HomeSection.homeHotVodAdapter?.setNewData(ArrayList())
         val home = ApiConfig.get().getHomeSourceBean()
         if (home != null) {
             SourceViewModel.clearSortCache(home.key)
@@ -891,8 +890,8 @@ class HomeActivity : BaseActivity() {
         refreshHomeRec = false
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) != 1) return
         val list = absXml?.videoList
-        if (list == null || UserFragment.homeHotVodAdapter == null) return
-        UserFragment.homeHotVodAdapter?.setNewData(list)
+        if (list == null || HomeSection.homeHotVodAdapter == null) return
+        HomeSection.homeHotVodAdapter?.setNewData(list)
     }
 
     private fun refreshHome(restart: Boolean) {
@@ -910,13 +909,13 @@ class HomeActivity : BaseActivity() {
             loadHomeSort(true)
             return
         }
-        val intent = Intent(applicationContext, HomeActivity::class.java).apply {
+        val intent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(applicationContext, HomeScreen::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             val bundle = Bundle()
             bundle.putBoolean("useCache", true)
             putExtras(bundle)
         }
-        this@HomeActivity.startActivity(intent)
+        this@HomeScreen.startActivity(intent)
     }
 
     private fun isActivityUnavailable(): Boolean {

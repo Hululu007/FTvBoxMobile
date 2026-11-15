@@ -413,9 +413,9 @@ class VodController(context: Context) : BaseController(context) {
                 hideBottom()
                 return@setOnClickListener
             }
-            if (context is Activity) {
+            mActivity?.let { host ->
                 isClickBackBtn = true
-                (context as Activity).onBackPressed()
+                host.onBackPressed()
             }
         }
         mLockView = findViewById(R.id.tv_lock)

@@ -12,7 +12,7 @@ import com.github.tvbox.osc.callback.LoadingCallback
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter
-import com.github.tvbox.osc.ui.fragment.ModelSettingFragment
+import com.github.tvbox.osc.ui.section.SettingsSection
 import com.kingja.loadsir.core.LoadService
 import com.kingja.loadsir.core.LoadSir
 import org.greenrobot.eventbus.Subscribe
@@ -25,7 +25,7 @@ class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun refresh(event: RefreshEvent) {
         if (event.type == RefreshEvent.TYPE_SETTING_SEARCH_TV) {
-            showRemoteTvDialog(ModelSettingFragment.foundRemoteTv)
+            showRemoteTvDialog(SettingsSection.foundRemoteTv)
         }
     }
 
@@ -45,12 +45,12 @@ class SearchRemoteTvDialog(context: Context) : BaseDialog(context) {
 
     private fun showRemoteTvDialog(found: Boolean) {
         if (!found) {
-            ModelSettingFragment.loadingSearchRemoteTvDialog?.showEmpty()
+            SettingsSection.loadingSearchRemoteTvDialog?.showEmpty()
             Toast.makeText(context, "未找到附近TVBox", Toast.LENGTH_SHORT).show()
             return
         }
-        ModelSettingFragment.loadingSearchRemoteTvDialog?.dismiss()
-        val hosts = ModelSettingFragment.remoteTvHostList ?: return
+        SettingsSection.loadingSearchRemoteTvDialog?.dismiss()
+        val hosts = SettingsSection.remoteTvHostList ?: return
         if (hosts.isNotEmpty()) {
             RemoteTVBox.setAvalible(hosts[0])
         }

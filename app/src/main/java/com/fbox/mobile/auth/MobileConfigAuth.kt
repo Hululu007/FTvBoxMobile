@@ -11,9 +11,9 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.fbox.mobile.MobileSheets
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.Movie
@@ -46,13 +46,19 @@ object MobileConfigAuth {
         return currentNote?.replace("未扫码", "未登录")?.replace("扫码", "授权") ?: "App 授权 / 手机登录"
     }
 
+    private fun getContext(owner: Any): Context {
+        return (owner as? Context)
+            ?: (owner as? com.github.tvbox.osc.base.ScreenSection)?.requireContext()
+            ?: com.github.tvbox.osc.base.App.getInstance()
+    }
+
     @JvmStatic
-    fun handle(owner: Fragment, video: Movie.Video, refreshed: Runnable): Boolean {
+    fun handle(owner: LifecycleOwner, video: Movie.Video, refreshed: Runnable): Boolean {
         val safeName = video.name ?: ""
         val source: SourceBean? = ApiConfig.get().getSource(video.sourceKey)
         if (!ConfigAuthProvider.isQrAction(source, video.action, safeName)) return false
         val provider = ConfigAuthProvider.fromTitle(safeName)
-        val context = owner.requireContext()
+        val context = getContext(owner)
         if (provider == null || !ConfigAuthProvider.supportsMobileApi(source)) {
             val dialog = BaseDialog(context)
             dialog.setTitle("手机授权暂不可用")
@@ -75,8 +81,8 @@ object MobileConfigAuth {
         return view
     }
 
-    private fun bind(owner: Fragment, dialog: BaseDialog, cleanup: Runnable) {
-        val lifecycle = owner.viewLifecycleOwner.lifecycle
+    private fun bind(owner: LifecycleOwner, dialog: BaseDialog, cleanup: Runnable) {
+        val lifecycle = owner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_DESTROY) dialog.dismiss()
         }
@@ -88,14 +94,16 @@ object MobileConfigAuth {
     }
 
     internal class LoginSheet(
-        private val owner: Fragment,
+        private val owner: LifecycleOwner,
         private val source: SourceBean,
         private val provider: ConfigAuthProvider,
         private val registration: Boolean,
         private val refreshed: Runnable,
-        private val backend: AuthSession.Backend
+        private val backend: AuthSession.Backend,
+        private val openApp: (Context, ConfigAuthProvider, String) -> Boolean = AuthLinks::openApp
     ) {
         private val main = Handler(Looper.getMainLooper())
+        private val context: Context = getContext(owner)
         private val dialog: BaseDialog
         private val status: TextView
         private val appButton: TextView
@@ -104,7 +112,6 @@ object MobileConfigAuth {
         private var url = ""
 
         init {
-            val context = owner.requireContext()
             dialog = BaseDialog(context)
             dialog.setTitle(provider.label + (if (registration) "注册" else "手机登录"))
             val body = LinearLayout(context)
@@ -123,10 +130,10 @@ object MobileConfigAuth {
             if (!registration && provider.supportsWebLogin()) {
                 add(body, "网页登录") {
                     stopSession()
-                    val intent = Intent(context, ConfigWebLoginActivity::class.java)
+                    val intent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(context, ConfigWebLoginScreen::class.java)
                     intent.putExtra("source", source.key)
                     intent.putExtra("provider", provider.id)
-                    owner.startActivity(intent)
+                    context.startActivity(intent)
                     dialog.dismiss()
                 }
             }
@@ -181,8 +188,8 @@ object MobileConfigAuth {
                     main.post {
                         if (dialog.isShowing) {
                             appButton.isEnabled = true
-                            if (AuthLinks.openApp(owner.requireContext(), provider, target) ||
-                                AuthLinks.openWeb(owner.requireContext(), provider, target)
+                            if (openApp(context, provider, target) ||
+                                AuthLinks.openWeb(context, provider, target)
                             ) {
                                 dialog.dismiss()
                             } else {
@@ -209,7 +216,7 @@ object MobileConfigAuth {
                             return
                         }
                         browserButton.visibility = View.VISIBLE
-                        val opened = AuthLinks.openApp(owner.requireContext(), provider, url)
+                        val opened = openApp(context, provider, url)
                         status.text = if (opened) {
                             "请在打开的 App 中确认授权，完成后返回 FBox"
                         } else {
@@ -234,7 +241,6 @@ object MobileConfigAuth {
         }
 
         private fun showManual() {
-            val context = owner.requireContext()
             val inputDialog = BaseDialog(context)
             inputDialog.setTitle(provider.label + " · 粘贴登录信息")
             val body = LinearLayout(context)
@@ -301,7 +307,7 @@ object MobileConfigAuth {
         private fun saved() {
             dialog.dismiss()
             SourceViewModel.clearRuntimeCache()
-            Toast.makeText(owner.requireContext(), "登录信息已保存", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "登录信息已保存", Toast.LENGTH_SHORT).show()
             refreshed.run()
         }
     }

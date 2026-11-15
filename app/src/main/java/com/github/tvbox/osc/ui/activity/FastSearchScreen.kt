@@ -21,7 +21,7 @@ import com.chad.library.adapter.base.BaseQuickAdapter
 import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.bean.AbsXml
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.SourceBean
@@ -62,7 +62,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * @date :2020/12/23
  * @description:
  */
-class FastSearchActivity : BaseActivity() {
+class FastSearchScreen : ScreenController() {
 
     companion object {
         private const val SEARCH_THREAD_COUNT = 6
@@ -273,7 +273,7 @@ class FastSearchActivity : BaseActivity() {
             putString("picture", video.pic)
         }
         putDetailFallbackCandidates(bundle, video)
-        jumpActivity(DetailActivity::class.java, bundle)
+        jumpActivity(DetailScreen::class.java, bundle)
     }
 
     override fun onBackPressed() {
@@ -730,7 +730,7 @@ class FastSearchActivity : BaseActivity() {
             }
         }
         if (candidates.isNotEmpty()) {
-            bundle.putSerializable(DetailActivity.EXTRA_DETAIL_FALLBACK_CANDIDATES, candidates)
+            bundle.putSerializable(DetailScreen.EXTRA_DETAIL_FALLBACK_CANDIDATES, candidates)
         }
     }
 

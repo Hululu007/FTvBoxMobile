@@ -26,7 +26,7 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.ui.fragment.PlayFragment
+import com.github.tvbox.osc.ui.section.PlaybackSection
 import com.github.tvbox.osc.util.ImgUtil
 import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.ScreenUtils
@@ -292,7 +292,7 @@ class MusicPlaybackService : Service() {
         }
     }
 
-    private fun getOwner(): PlayFragment? {
+    private fun getOwner(): PlaybackSection? {
         return owner?.get()
     }
 
@@ -339,7 +339,7 @@ class MusicPlaybackService : Service() {
         private const val EXTRA_SEEK = "seek"
 
         private var instance: MusicPlaybackService? = null
-        private var owner: WeakReference<PlayFragment>? = null
+        private var owner: WeakReference<PlaybackSection>? = null
 
         @JvmStatic
         fun isSupported(context: Context?): Boolean {
@@ -350,7 +350,7 @@ class MusicPlaybackService : Service() {
         @JvmStatic
         fun update(
             context: Context?,
-            fragment: PlayFragment?,
+            fragment: PlaybackSection?,
             title: String?,
             subtitle: String?,
             artwork: String?,
@@ -378,7 +378,7 @@ class MusicPlaybackService : Service() {
         }
 
         @JvmStatic
-        fun stop(context: Context?, fragment: PlayFragment?) {
+        fun stop(context: Context?, fragment: PlaybackSection?) {
             val current = owner?.get()
             if (fragment != null && current != null && current != fragment) return
             owner = null

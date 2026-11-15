@@ -6,8 +6,8 @@ import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.cache.RoomDataManger
 import com.github.tvbox.osc.cache.VodCollect
-import com.github.tvbox.osc.ui.activity.CollectActivity
-import com.github.tvbox.osc.ui.activity.HistoryActivity
+import com.github.tvbox.osc.ui.activity.CollectionScreen
+import com.github.tvbox.osc.ui.activity.HistoryScreen
 import java.util.ArrayList
 
 class ConfirmClearDialog(context: Context, type: String?) : BaseDialog(context) {
@@ -23,13 +23,13 @@ class ConfirmClearDialog(context: Context, type: String?) : BaseDialog(context) 
         tvYes.setOnClickListener {
             if ("Collect" == type) {
                 val vodInfoList: List<VodCollect> = ArrayList()
-                CollectActivity.collectAdapter?.setNewData(vodInfoList)
-                CollectActivity.collectAdapter?.notifyDataSetChanged()
+                CollectionScreen.collectAdapter?.setNewData(vodInfoList)
+                CollectionScreen.collectAdapter?.notifyDataSetChanged()
                 RoomDataManger.deleteVodCollectAll()
             } else if ("History" == type) {
                 val vodInfoList: List<VodInfo> = ArrayList()
-                HistoryActivity.historyAdapter?.setNewData(vodInfoList)
-                HistoryActivity.historyAdapter?.notifyDataSetChanged()
+                HistoryScreen.historyAdapter?.setNewData(vodInfoList)
+                HistoryScreen.historyAdapter?.notifyDataSetChanged()
                 RoomDataManger.deleteVodRecordAll()
             }
             dismiss()

@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.widget.ListView
-import com.github.tvbox.osc.ui.activity.LivePlayActivity
+import com.github.tvbox.osc.ui.activity.LiveScreen
 
 class ChannelListView @JvmOverloads constructor(
     context: Context,
@@ -16,7 +16,7 @@ class ChannelListView @JvmOverloads constructor(
     var dataChangedListener: DataChangedListener? = null
 
     @JvmField
-    var pos: Int = LivePlayActivity.currentChannelGroupIndex
+    var pos: Int = LiveScreen.currentChannelGroupIndex
     private var y: Int = 0
 
     fun setSelect(position: Int, y: Int) {

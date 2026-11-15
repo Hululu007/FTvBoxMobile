@@ -7,16 +7,16 @@ import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.Toast
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.receiver.PushReceiver
 
 /** Phone entry point for direct links and links handled by the subscription's push source. */
-class PushActivity : BaseActivity() {
+class PushScreen : ScreenController() {
     override fun getLayoutResID(): Int = R.layout.activity_push
 
     override fun init() {
-        val input: EditText = findViewById(R.id.mobileLinkInput)
-        findViewById<View>(R.id.pushLocal).setOnClickListener {
+        val input: EditText = requireNotNull(findViewById(R.id.mobileLinkInput))
+        findViewById<View>(R.id.pushLocal)?.setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             if (clipboard == null || !clipboard.hasPrimaryClip() || clipboard.primaryClip == null) {
                 Toast.makeText(this, "剪贴板中没有内容", Toast.LENGTH_SHORT).show()
@@ -26,7 +26,7 @@ class PushActivity : BaseActivity() {
             input.setText(value?.toString()?.trim() ?: "")
             input.setSelection(input.length())
         }
-        findViewById<View>(R.id.mobilePlayLink).setOnClickListener { play(input) }
+        findViewById<View>(R.id.mobilePlayLink)?.setOnClickListener { play(input) }
         input.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_GO) {
                 play(input)

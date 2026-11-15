@@ -50,6 +50,6 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>
-    <androidx.fragment.app.FragmentContainerView android:id="@+id/previewPlayer" android:layout_width="match_parent" android:layout_height="196dp" android:layout_marginStart="0dp" android:layout_marginLeft="0dp" android:layout_marginTop="0dp" android:layout_marginBottom="5dp" android:background="@drawable/preview_player_round" android:visibility="gone" android:layout_marginRight="0dp" android:layout_marginEnd="0dp" />
+    <FrameLayout android:id="@+id/previewPlayer" android:layout_width="match_parent" android:layout_height="196dp" android:layout_marginStart="0dp" android:layout_marginLeft="0dp" android:layout_marginTop="0dp" android:layout_marginBottom="5dp" android:background="@drawable/preview_player_round" android:visibility="gone" android:layout_marginRight="0dp" android:layout_marginEnd="0dp" />
     <View android:id="@+id/previewPlayerBlock" android:layout_width="match_parent" android:layout_height="196dp" android:focusable="true" android:background="@drawable/preview_player_block" android:layout_marginStart="0dp" android:layout_marginLeft="0dp" android:layout_marginTop="0dp" android:layout_marginBottom="5dp" android:visibility="gone" android:layout_marginRight="0dp" android:layout_marginEnd="0dp" />
 </FrameLayout>

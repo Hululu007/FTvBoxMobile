@@ -1,6 +1,6 @@
 package com.github.tvbox.osc.ui.adapter
 
-import android.app.Activity
+import com.github.tvbox.osc.base.findScreenController
 import android.graphics.Color
 import android.view.View
 import android.widget.TextView
@@ -28,7 +28,7 @@ class SeriesAdapter(private val mGridLayoutManager: V7GridLayoutManager) :
             helper.itemView.nextFocusUpId = R.id.mGridViewFlag
         }
 
-        val activity = helper.itemView.context as? Activity
+        val activity = helper.itemView.context.findScreenController()
         val mSeriesGroupTv = activity?.findViewById<View>(R.id.mSeriesGroupTv)
         if (data.size > 1 && mSeriesGroupTv != null && mSeriesGroupTv.visibility == View.VISIBLE) {
             val spanCount = mGridLayoutManager.spanCount

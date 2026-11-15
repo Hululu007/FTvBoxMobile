@@ -1,4 +1,4 @@
-package com.github.tvbox.osc.ui.fragment
+package com.github.tvbox.osc.ui.section
 
 import android.content.Intent
 import android.os.Bundle
@@ -15,20 +15,20 @@ import com.fbox.mobile.MobileSheets
 import com.fbox.mobile.auth.MobileConfigAuth
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ScreenSection
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.cache.RoomDataManger
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.event.ServerEvent
-import com.github.tvbox.osc.ui.activity.CollectActivity
-import com.github.tvbox.osc.ui.activity.DetailActivity
-import com.github.tvbox.osc.ui.activity.FastSearchActivity
-import com.github.tvbox.osc.ui.activity.HistoryActivity
-import com.github.tvbox.osc.ui.activity.HomeActivity
-import com.github.tvbox.osc.ui.activity.LivePlayActivity
-import com.github.tvbox.osc.ui.activity.PushActivity
-import com.github.tvbox.osc.ui.activity.SearchActivity
-import com.github.tvbox.osc.ui.activity.SettingActivity
+import com.github.tvbox.osc.ui.activity.CollectionScreen
+import com.github.tvbox.osc.ui.activity.DetailScreen
+import com.github.tvbox.osc.ui.activity.FastSearchScreen
+import com.github.tvbox.osc.ui.activity.HistoryScreen
+import com.github.tvbox.osc.ui.activity.HomeScreen
+import com.github.tvbox.osc.ui.activity.LiveScreen
+import com.github.tvbox.osc.ui.activity.PushScreen
+import com.github.tvbox.osc.ui.activity.SearchScreen
+import com.github.tvbox.osc.ui.activity.SettingsScreen
 import com.github.tvbox.osc.ui.adapter.HomeHotVodAdapter
 import com.github.tvbox.osc.util.FastClickCheckUtil
 import com.github.tvbox.osc.util.HawkConfig
@@ -55,7 +55,7 @@ import java.util.Calendar
  * @date :2021/3/9
  * @description:
  */
-class UserFragment : BaseLazyFragment(), View.OnClickListener {
+class HomeSection : ScreenSection(), View.OnClickListener {
     private val localVideoPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@registerForActivityResult
         try {
@@ -83,17 +83,17 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
         var tvHotList: TvRecyclerView? = null
 
         @JvmStatic
-        fun newInstance(): UserFragment {
-            return UserFragment()
+        fun newInstance(): HomeSection {
+            return HomeSection()
         }
 
         @JvmStatic
-        fun newInstance(recVod: List<Movie.Video>?): UserFragment {
-            return UserFragment().setArguments(recVod)
+        fun newInstance(recVod: List<Movie.Video>?): HomeSection {
+            return HomeSection().setArguments(recVod)
         }
     }
 
-    fun setArguments(recVod: List<Movie.Video>?): UserFragment {
+    fun setArguments(recVod: List<Movie.Video>?): HomeSection {
         this.homeSourceRec = recVod
         return this
     }
@@ -147,9 +147,9 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
     private fun jumpSearch(vod: Movie.Video) {
         val ctx = context ?: return
         val newIntent = if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true)) {
-            Intent(ctx, FastSearchActivity::class.java)
+            com.github.tvbox.osc.ui.activity.ScreenIntents.create(ctx, FastSearchScreen::class.java)
         } else {
-            Intent(ctx, SearchActivity::class.java)
+            com.github.tvbox.osc.ui.activity.ScreenIntents.create(ctx, SearchScreen::class.java)
         }
         newIntent.putExtra("title", vod.name)
         newIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -181,8 +181,8 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
         localFiles?.setOnClickListener { localVideoPicker.launch(arrayOf("video/*")) }
         tvHotList = findViewById(R.id.tvHotList)
         tvHotList?.isNestedScrollingEnabled = true
-        if (mActivity is HomeActivity) {
-            (mActivity as HomeActivity).bindMobileHomeActions(findViewById(R.id.mobileHomeActionsClip))
+        if (mActivity is HomeScreen) {
+            (mActivity as HomeScreen).bindMobileHomeActions(findViewById(R.id.mobileHomeActionsClip))
         }
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1 && homeSourceRec != null) {
             style = ImgUtil.initStyle()
@@ -203,7 +203,7 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
             val vaction = vod.action
 
             if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1 && homeSourceRec != null && vaction != null) {
-                if (MobileConfigAuth.handle(this@UserFragment, vod) {
+                if (MobileConfigAuth.handle(this@HomeSection, vod) {
                         EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_CONFIG_AUTH_CHANGED))
                     }) return@setOnItemClickListener
                 sourceViewModel?.action(vod.sourceKey ?: "", vaction)
@@ -226,7 +226,7 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
                     putString("title", vod.name)
                     putString("picture", vod.pic)
                 }
-                jumpActivity(DetailActivity::class.java, bundle)
+                jumpActivity(DetailScreen::class.java, bundle)
             }
         }
 
@@ -241,7 +241,7 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
                     putString("title", vod.name)
                     putString("picture", vod.pic)
                 }
-                jumpActivity(DetailActivity::class.java, bundle)
+                jumpActivity(DetailScreen::class.java, bundle)
             } else if (!vid.isNullOrEmpty() && (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 2)) {
                 HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete
                 adapter.notifyDataSetChanged()
@@ -249,7 +249,7 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
                 val bundle = Bundle().apply {
                     putString("title", vod.name)
                 }
-                jumpActivity(FastSearchActivity::class.java, bundle)
+                jumpActivity(FastSearchScreen::class.java, bundle)
             }
             true
         })
@@ -366,12 +366,12 @@ class UserFragment : BaseLazyFragment(), View.OnClickListener {
         HawkConfig.hotVodDelete = false
         FastClickCheckUtil.check(v)
         when (v.id) {
-            R.id.tvLive -> jumpActivity(LivePlayActivity::class.java)
-            R.id.tvSearch -> jumpActivity(SearchActivity::class.java)
-            R.id.tvSetting -> jumpActivity(SettingActivity::class.java)
-            R.id.tvHistory -> jumpActivity(HistoryActivity::class.java)
-            R.id.tvPush -> jumpActivity(PushActivity::class.java)
-            R.id.tvFavorite -> jumpActivity(CollectActivity::class.java)
+            R.id.tvLive -> jumpActivity(LiveScreen::class.java)
+            R.id.tvSearch -> jumpActivity(SearchScreen::class.java)
+            R.id.tvSetting -> jumpActivity(SettingsScreen::class.java)
+            R.id.tvHistory -> jumpActivity(HistoryScreen::class.java)
+            R.id.tvPush -> jumpActivity(PushScreen::class.java)
+            R.id.tvFavorite -> jumpActivity(CollectionScreen::class.java)
         }
     }
 

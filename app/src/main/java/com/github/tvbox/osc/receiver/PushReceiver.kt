@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.text.TextUtils
 import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.ui.activity.DetailActivity
+import com.github.tvbox.osc.ui.activity.DetailScreen
 
 class PushReceiver : BroadcastReceiver() {
     companion object {
@@ -29,7 +29,7 @@ class PushReceiver : BroadcastReceiver() {
         if (action != intent.action || intent.extras == null) return
         val url = intent.extras?.getString("url")
         if (TextUtils.isEmpty(url) || ApiConfig.get().getSource("push_agent") == null) return
-        val newIntent = Intent(context, DetailActivity::class.java)
+        val newIntent = com.github.tvbox.osc.ui.activity.ScreenIntents.create(context, DetailScreen::class.java)
         newIntent.putExtra("id", url)
         newIntent.putExtra("sourceKey", "push_agent")
         newIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

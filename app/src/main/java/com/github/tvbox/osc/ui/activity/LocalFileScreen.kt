@@ -10,7 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ScreenController
 import com.github.tvbox.osc.ui.adapter.LocalFileAdapter
 import com.owen.tvrecyclerview.widget.TvRecyclerView
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager
@@ -19,7 +19,7 @@ import java.io.File
 import java.util.ArrayList
 import java.util.Arrays
 
-class LocalFileActivity : BaseActivity() {
+class LocalFileScreen : ScreenController() {
 
     companion object {
         const val EXTRA_LIVE = "live"
@@ -103,15 +103,13 @@ class LocalFileActivity : BaseActivity() {
         finish()
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_UP && event.keyCode == KeyEvent.KEYCODE_BACK) {
-            val curr = currentDir
-            if (curr != null && !isStorageRoot(curr) && curr.parentFile != null) {
-                loadDir(curr.parentFile)
-                return true
-            }
+    override fun onBackPressed() {
+        val curr = currentDir
+        if (curr != null && !isStorageRoot(curr) && curr.parentFile != null) {
+            loadDir(curr.parentFile)
+        } else {
+            super.onBackPressed()
         }
-        return super.dispatchKeyEvent(event)
     }
 
     private fun isStorageRoot(dir: File): Boolean {
