@@ -1090,6 +1090,8 @@ class NativeBehaviorTest {
     @Test
     @Throws(Exception::class)
     fun selectingSourceRefreshesHomeRecommendations() {
+        // Leave catalog pages outside the ViewPager's offscreen limit.
+        server!!.categoryCount = 8
         ScreenScenario.launch(HomeScreen::class.java).use { home ->
             await(BooleanSupplier { homeShows(home, "手机测试源", "手机播放测试") })
             home.onActivity { activity -> activity.requireViewById<View>(R.id.tvName).performClick() }
@@ -1661,6 +1663,9 @@ class NativeBehaviorTest {
         var episodeCount: Int = 1
 
         @Volatile
+        var categoryCount: Int = 1
+
+        @Volatile
         var episodeNames: List<String>? = null
 
         private fun episodes(url: String): String {
@@ -1717,11 +1722,17 @@ class NativeBehaviorTest {
                     if (range != null) response.addHeader("Content-Range", "bytes " + start + "-" + (video.size - 1) + "/" + video.size)
                     response
                 }
-                else -> newFixedLengthResponse(
-                    Response.Status.OK,
-                    "application/json",
-                    "{\"class\":[{\"type_id\":\"1\",\"type_name\":\"电影\"}],\"page\":1,\"pagecount\":1,\"list\":[{\"vod_id\":\"" + itemId() + "\",\"vod_name\":\"" + (if (session.uri == "/second") "第二线路内容" else "手机播放测试") + "\",\"vod_pic\":\"\",\"vod_play_from\":\"web\$\$\$direct\",\"vod_play_url\":\"" + episodes(webpage) + "$$$" + episodes("$b/video.mp4") + "\"}]}"
-                )
+                else -> {
+                    val categories = (1..categoryCount).joinToString(",") { id ->
+                        val name = if (id == 1) "电影" else "分类$id"
+                        """{"type_id":"$id","type_name":"$name"}"""
+                    }
+                    newFixedLengthResponse(
+                        Response.Status.OK,
+                        "application/json",
+                        "{\"class\":[$categories],\"page\":1,\"pagecount\":1,\"list\":[{\"vod_id\":\"" + itemId() + "\",\"vod_name\":\"" + (if (session.uri == "/second") "第二线路内容" else "手机播放测试") + "\",\"vod_pic\":\"\",\"vod_play_from\":\"web\$\$\$direct\",\"vod_play_url\":\"" + episodes(webpage) + "$$$" + episodes("$b/video.mp4") + "\"}]}"
+                    )
+                }
             }
         }
     }

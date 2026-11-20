@@ -119,7 +119,10 @@ abstract class ScreenSection : LifecycleOwner, ViewModelStoreOwner, ActivityResu
         destroyed = true
         onDestroyView()
         onDestroy()
-        registry.currentState = Lifecycle.State.DESTROYED
+        // Offscreen pager sections may be discarded before createView().
+        if (registry.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+            registry.currentState = Lifecycle.State.DESTROYED
+        }
         viewModelStore.clear()
         launchers.forEach { it.unregister() }
         launchers.clear()
